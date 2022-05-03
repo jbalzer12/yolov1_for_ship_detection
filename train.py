@@ -94,7 +94,8 @@ def train_fn(train_loader, model, optimizer, loss_fn):
 
 def main():
 
-    print('Working Device: ', DEVICE)    cfg = parse_cfg(args.cfg)
+    print('Working Device: ', DEVICE)    
+    cfg = parse_cfg(args.cfg)
     S, B, num_classes, input_size = cfg['S'], cfg['B'], cfg['num_classes'], cfg['input_size']
     dataset_cfg = parse_cfg(args.dataset_cfg)
     IMG_DIR, LABEL_DIR = dataset_cfg['images'], dataset_cfg['labels']
