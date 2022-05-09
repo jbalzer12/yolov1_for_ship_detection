@@ -1,12 +1,17 @@
 # dataset images folder
-images: data/VOC2007_2012/images
+images: data/DOTA-v2.0/train/images
+# images: data/VOC2007_2012/images
 # images: dataset/NWPU VHR-10 dataset/positive image set/
 
 # dataset labels folder
-labels: data/VOC2007_2012/labels
+labels: data/DOTA-v2.0/train/labelText-v2.0
+# labels: data/VOC2007_2012/labels
 # labels: dataset/NWPU VHR-10 dataset/ground truth/
 
 # class names
-#class_names: [ 'person', 'bird', 'cat', 'cow', 'dog', 'horse', 'sheep', 'aeroplane', 'bicycle', 'boat', 'bus', 'car',
+class names: [ 'plane', 'ship', 'storage tank', ’baseball diamond', 'tennis court', ’basketball court', 
+                'ground track field', 'harbor', 'bridge', 'large vehicle', ’small vehicle', 'helicopter', 
+                'roundabout', ’soccer ball field', 'swimming pool', ’container crane', 'airport', 'helipad' ] # DOTA
+# class_names: [ 'person', 'bird', 'cat', 'cow', 'dog', 'horse', 'sheep', 'aeroplane', 'bicycle', 'boat', 'bus', 'car',
 #               'motorbike', 'train', 'bottle', 'chair', 'dining table', 'potted plant', 'sofa', 'tvmonitor' ]
 # class_names: ['airplane', 'ship', 'storage tank', 'baseball diamond', 'tennis court', 'basketball court', 'ground track field', 'harbor', 'bridge', 'vehicle']
