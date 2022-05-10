@@ -43,7 +43,7 @@ args = parser.parse_args()
 LEARNING_RATE = args.lr
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = args.batch_size # 64 in original paper but I don't have that much vram, grad accum?
-WEIGHT_DECAY = 0
+WEIGHT_DECAY = 0.0005
 EPOCHS = args.epochs
 NUM_WORKERS = 2
 PIN_MEMORY = True
@@ -161,7 +161,7 @@ def main():
         OUTPUT.write(f"Train mAP: {mean_avg_prec}\n")
         print(f"Train mAP: {mean_avg_prec}")
 
-        if mean_avg_prec > 0.9:
+        if mean_avg_prec > 0.95:
             checkpoint = {
                 "state_dict": model.state_dict(),
                 "optimizer": optimizer.state_dict(),
