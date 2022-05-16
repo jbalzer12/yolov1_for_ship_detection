@@ -21,9 +21,11 @@ from utils import (
     plot_image,
     save_checkpoint,
     load_checkpoint,
-    parse_cfg
+    parse_cfg,
 )
 from loss import YoloLoss
+
+from datetime import datetime as dt
 
 seed = 123
 torch.manual_seed(seed)
@@ -31,11 +33,11 @@ torch.manual_seed(seed)
 parser = argparse.ArgumentParser(description='YOLOv1-pytorch')
 parser.add_argument("--cfg", "-c", default="cfg/yolov1.yaml", help="Yolov1 config file path", type=str)
 parser.add_argument("--dataset_cfg", "-d", default="cfg/dataset.yaml", help="Dataset config file path", type=str)
-parser.add_argument("--epochs", "-e", default=1000, help="Training epochs", type=int)
-parser.add_argument("--batch_size", "-bs", default=16, help="Training batch size", type=int)
-parser.add_argument("--lr", "-lr", default=2e-5, help="Training learning rate", type=float)
-parser.add_argument("--load_model", "-lm", default='True', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="overfit.pth.tar", help="Model path", type=str)
+parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=int)
+parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
+parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
+parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -55,8 +57,8 @@ LOAD_MODEL_FILE = args.model_path
 # IMG_DIR = "data/VOC2007_2012/images"
 # LABEL_DIR = "data/VOC2007_2012/labels"
 
-OUTPUT = open('output', 'w')
-
+OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output.txt', 'w') # HDF5 anstelle von .txt?
+OUTPUT.write('Train_mAP Mean_loss\n')
 
 class Compose(object):
     def __init__(self, transforms):
@@ -88,11 +90,14 @@ def train_fn(train_loader, model, optimizer, loss_fn):
         # update progress bar
         loop.set_postfix(loss=loss.item())
 
-    OUTPUT.write(f"Mean loss was {sum(mean_loss)/len(mean_loss)}\n")
+    #OUTPUT.write(f"Mean loss was: {sum(mean_loss)/len(mean_loss)}\n")
+    OUTPUT.write(f' {sum(mean_loss)/len(mean_loss)}\n')
     print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
 
 
 def main():
+
+    # OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output100examples.txt', 'a') # HDF5 anstelle von .txt?
 
     print('Working Device: ', DEVICE)    
     cfg = parse_cfg(args.cfg)
@@ -107,11 +112,13 @@ def main():
     )
     loss_fn = YoloLoss()
 
+
     if LOAD_MODEL:
         load_checkpoint(torch.load(LOAD_MODEL_FILE), model, optimizer)
 
     train_dataset = VOCDataset(
-        "data/VOC2007_2012/100examples.csv",
+        #"data/VOC2007_2012/100examples.csv",
+        "data/VOC2007_2012/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
@@ -130,6 +137,8 @@ def main():
         drop_last=True,
     )
 
+    print("train_loader loaded")
+
     test_loader = DataLoader(
         dataset=test_dataset,
         batch_size=BATCH_SIZE,
@@ -138,9 +147,18 @@ def main():
         shuffle=True,
         drop_last=True,
     )
+    print("test_loader loaded")
 
     for epoch in range(EPOCHS):
-        if LOAD_MODEL == False:
+
+        now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
+        print("epoch:", epoch, "/ 135 =>", epoch / 135 * 100, "%, date/time:", now)
+        NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs.txt', 'w') # file to check the progress
+        NUM_EPOCH.write("epoch:" + str(epoch) + "/ 135 =>" + str(epoch / 135 * 100) + "%, date/time:" + str(now))
+        NUM_EPOCH.close()
+
+        
+        if LOAD_MODEL == True:
             for x, y in train_loader:
                 x = x.to(DEVICE)
                 for idx in range(8):
@@ -158,9 +176,12 @@ def main():
         mean_avg_prec = mean_average_precision(
             pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint"
         )
-        OUTPUT.write(f"Train mAP: {mean_avg_prec}\n")
+
+        #OUTPUT.write(f"Train mAP: {mean_avg_prec}\n")
+        OUTPUT.write(f'{mean_avg_prec}')
         print(f"Train mAP: {mean_avg_prec}")
 
+        '''
         if mean_avg_prec > 0.95:
             checkpoint = {
                 "state_dict": model.state_dict(),
@@ -170,8 +191,26 @@ def main():
             import time
             sys.exit()
             time.sleep(10)
+        '''
 
         train_fn(train_loader, model, optimizer, loss_fn)
+
+        # OUTPUT.close()
+
+    print("epochs completed")
+    OUTPUT.close()
+    
+    # the following lines were added to make sure the procession stops after the full range of epochs and not 
+    # at the point of a specific mean average precision 
+    checkpoint = {
+        "state_dict": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+    }
+    save_checkpoint(checkpoint, filename=LOAD_MODEL_FILE)
+    #import time
+    import sys
+    sys.exit()
+    exit()
 
 
 if __name__ == "__main__":
