@@ -1,7 +1,7 @@
 overfit.pth.tar
 overfit.pth
 output
-data/Airbus-Aircraft-Detection/archive-2
+data/airbus-ship-detection
 data/DOTA-v2.0
 data/VOC2007_2012
 __pycache__
