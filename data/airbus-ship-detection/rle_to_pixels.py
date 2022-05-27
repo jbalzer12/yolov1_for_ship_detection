@@ -26,14 +26,15 @@ CLASS_NAMES = dataset_cfg['class names']
 
 
 df = pd.read_csv("train_ship_segmentations_v2.csv", header=0)
+
 # This counter will refer to the index of the df file to get the ImageId:
 counter = 0
 
 # For each element inside the given csv file we want to decode the labels given as rle code
 # into bounding boxes in a format, the yolo algorithm asks for.
-# As a result .txt files get written as well as a csv file with image and txt file names.
-for i in df['EncodedPixels'][:5]:
-   # We want to ignore the rows with a NaN value in the EncodedPixels column
+for i in df['EncodedPixels']:
+   # We want to devide the rows with a NaN value in the EncodedPixels column and 
+   # the oneswith a float value
    if type(i) != float: 
       elem = [int(j) for j in i.split()]
       pixels = [(pixel_position % INPUT_SIZE, pixel_position // INPUT_SIZE) 
@@ -63,12 +64,18 @@ for i in df['EncodedPixels'][:5]:
       height = (maxx - minx) / INPUT_SIZE
 
       # Now the txt file gets written
-      yolo_file = open('labels/' + (df['ImageId'][counter]).removesuffix('.jpg') + '.txt', 'a')
+      image_id = (df['ImageId'][counter]).removesuffix('.jpg')
+      yolo_file = open('labels/' + image_id + '.txt', 'a')
       yolo_file.write(f'1 {midpoint_x_yolo} {midpoint_y_yolo} {width} {height}\n')
+      yolo_file.close()
 
+   else: 
+      # An empty txt file gets written
+      image_id = (df['ImageId'][counter]).removesuffix('.jpg')
+      yolo_file = open('labels/' + image_id + '.txt', 'a')
+      yolo_file.close()
 
    counter += 1
-
 
 ''' 
 YOLO format:
