@@ -71,6 +71,8 @@ for i in df['EncodedPixels']:
 
    else: 
       # An empty txt file gets written
+      # (At this point, I did not devide the mass of training data into 
+      # two masses, one for training, one for validation)
       image_id = (df['ImageId'][counter]).removesuffix('.jpg')
       yolo_file = open('labels/' + image_id + '.txt', 'a')
       yolo_file.close()
