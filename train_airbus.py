@@ -11,7 +11,10 @@ import torchvision.transforms.functional as FT
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from model import Yolov1
-from dataset import VOCDataset
+from dataset import (
+    VOCDataset,
+    Airbus_Dataset,
+)
 from utils import (
     non_max_suppression,
     mean_average_precision,
@@ -31,8 +34,8 @@ seed = 123
 torch.manual_seed(seed)
 
 parser = argparse.ArgumentParser(description='YOLOv1-pytorch')
-parser.add_argument("--cfg", "-c", default="cfg/VOC/yolov1.yaml", help="Yolov1 config file path", type=str)
-parser.add_argument("--dataset_cfg", "-d", default="cfg/VOC/dataset.yaml", help="Dataset config file path", type=str)
+parser.add_argument("--cfg", "-c", default="cfg/airbus-ship-detection/yolov1.yaml", help="Yolov1 config file path", type=str)
+parser.add_argument("--dataset_cfg", "-d", default="cfg/airbus-ship-detection/dataset.yaml", help="Dataset config file path", type=str)
 parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=int)
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
@@ -56,9 +59,11 @@ elif args.load_model == 'False':
 LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
-    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_SDG.txt', 'w') # HDF5 anstelle von .txt?
+    OUTPUT = open('output_airbus_135.txt', 'w') # HDF5 anstelle von .txt?
+    #OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135.txt', 'w') # HDF5 anstelle von .txt?
     OUTPUT.write('Train_mAP Mean_loss\n')
 
+'''
 class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms
@@ -71,6 +76,7 @@ class Compose(object):
 
 
 transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor()])
+'''
 
 # Training function
 def train_fn(train_loader, model, optimizer, loss_fn):
@@ -81,13 +87,11 @@ def train_fn(train_loader, model, optimizer, loss_fn):
 
     for batch_idx, (x, y) in enumerate(loop):
         x, y = x.to(DEVICE), y.to(DEVICE)
-        print('label-matrix: ', str(y))
         out = model(x)
         loss = loss_fn(out, y)
         mean_loss.append(loss.item())
         optimizer.zero_grad()
         loss.backward()
-        print('optimizer: ' + str(optimizer))
         optimizer.step()
 
         # Update progress bar
@@ -119,16 +123,24 @@ def main():
         a = torch.load(LOAD_MODEL_FILE, map_location=torch.device('cpu'))
         load_checkpoint(a, model, optimizer)
 
-    train_dataset = VOCDataset(
-        #"data/VOC2007_2012/100examples.csv",
-        "data/VOC2007_2012/train.csv",
-        transform=transform,
+    train_dataset = Airbus_Dataset(
+        "data/airbus-ship-detection/train.csv",
+        #transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
+        S=S,
+        B=B,
+        C=num_classes,
     )
 
-    test_dataset = VOCDataset(
-        "data/VOC2007_2012/test.csv", transform=transform, img_dir=IMG_DIR, label_dir=LABEL_DIR,
+    test_dataset = Airbus_Dataset(
+        "data/airbus-ship-detection/val.csv", 
+        #transform=transform, 
+        img_dir=IMG_DIR, 
+        label_dir=LABEL_DIR,
+        S=S,
+        B=B,
+        C=num_classes,
     )
 
     train_loader = DataLoader(
@@ -156,7 +168,8 @@ def main():
             now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
             print("epoch:", epoch, f"/ {args.epochs} =>", epoch / args.epochs * 100, "%, date/time:", now)    
             # file to check the progress
-            NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs.txt', 'w') 
+            #NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs.txt', 'w') 
+            NUM_EPOCH = open('numberofepochs.txt', 'w') 
             NUM_EPOCH.write("epoch:" + str(epoch) + f"/ {args.epochs} =>" + str(epoch / args.epochs * 100) + "%, date/time:" + str(now))
             NUM_EPOCH.close()
 
@@ -164,10 +177,8 @@ def main():
         if LOAD_MODEL:
             for x, y in train_loader:
                 x = x.to(DEVICE)
-                torch.save(y, 'label_matrix.txt')
-                print('close')
                 for idx in range(8):
-                    bboxes = cellboxes_to_boxes(model(x))
+                    bboxes = cellboxes_to_boxes(model(x), S=S, B=B, C=num_classes)
                     bboxes = non_max_suppression(bboxes[idx], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
                     plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes)
 
@@ -175,7 +186,7 @@ def main():
                 sys.exit()
 
         pred_boxes, target_boxes = get_bboxes(
-            train_loader, model, iou_threshold=0.5, threshold=0.4
+            loader=train_loader, model=model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
         )
 
         mean_avg_prec = mean_average_precision(

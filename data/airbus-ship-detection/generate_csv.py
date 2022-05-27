@@ -1,6 +1,9 @@
 ######################################################
 ## This file writes all train and validation files 
 ## (.jpg and .txt) int oa csv.
+## I used it, after I generated label files and separated
+## the training data into two datasets: one for training
+## and one for validation (90 : 10)
 ######################################################
 ## Author: Josefina Balzer
 ######################################################

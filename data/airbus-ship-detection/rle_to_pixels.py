@@ -64,6 +64,8 @@ for i in df['EncodedPixels']:
       height = (maxx - minx) / INPUT_SIZE
 
       # Now the txt file gets written
+      # (At this point, I did not devide the mass of training data into 
+      # two masses, one for training, one for validation)
       image_id = (df['ImageId'][counter]).removesuffix('.jpg')
       yolo_file = open('labels/' + image_id + '.txt', 'a')
       yolo_file.write(f'1 {midpoint_x_yolo} {midpoint_y_yolo} {width} {height}\n')
