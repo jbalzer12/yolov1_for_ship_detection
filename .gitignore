@@ -1,9 +1,9 @@
 overfit.pth.tar
 overfit.pth
 output
-data/airbus-ship-detection/labels
+data/airbus-ship-detection/train
+data/airbus-ship-detection/val
 data/airbus-ship-detection/test_v2
-data/airbus-ship-detection/train_v2
 data/airbus-ship-detection/sample_submission_v2.csv
 data/airbus-ship-detection/train_ship_segmentations_v2.csv
 data/DOTA-v2.0
