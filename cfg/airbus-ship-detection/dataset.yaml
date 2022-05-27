@@ -1,0 +1,8 @@
+# dataset images folder
+images: data/airbus-ship-detection/train_v2
+
+# dataset labels folder
+labels: data/airbus-ship-detection/labels
+
+# class names
+class names: [ 'ship' ]
