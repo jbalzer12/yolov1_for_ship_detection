@@ -112,9 +112,11 @@ def mean_average_precision(
     Returns:
         float: mAP value across all classes given a specific IoU threshold 
     """
-
-    # list storing all AP for respective classes
+    mean_average_precision = 0
+    # list storing all AP, recalls & precisions for respective classes
     average_precisions = []
+    recalls_array = []
+    precisions_array = []
 
     # used for numerical stability later on
     epsilon = 1e-6
@@ -126,6 +128,7 @@ def mean_average_precision(
         # Go through all predictions and targets,
         # and only add the ones that belong to the
         # current class c
+        # Pred boxes: [[train_idx, class_pred, prob_score, x1, y1, x2, y2], ...]
         for detection in pred_boxes:
             if detection[1] == c:
                 detections.append(detection)
@@ -191,16 +194,19 @@ def mean_average_precision(
             else:
                 FP[detection_idx] = 1
 
-        TP_cumsum = torch.cumsum(TP, dim=0)
-        FP_cumsum = torch.cumsum(FP, dim=0)
+        TP_cumsum = torch.cumsum(TP, dim=0) # True positive
+        FP_cumsum = torch.cumsum(FP, dim=0) # False positive
         recalls = TP_cumsum / (total_true_bboxes + epsilon)
         precisions = torch.divide(TP_cumsum, (TP_cumsum + FP_cumsum + epsilon))
         precisions = torch.cat((torch.tensor([1]), precisions))
         recalls = torch.cat((torch.tensor([0]), recalls))
+        precisions_array.append(precisions)
+        recalls_array.append(recalls)
         # torch.trapz for numerical integration
         average_precisions.append(torch.trapz(precisions, recalls))
-
-    return sum(average_precisions) / len(average_precisions)
+        
+    mean_average_precision = sum(average_precisions) / len(average_precisions)
+    return mean_average_precision, recalls_array, precisions_array # RECALL AND PRECISION SHOULD BE ADDED TO THE OUTPUT.dat
 
 
 def plot_image(image, boxes):
@@ -243,6 +249,9 @@ def get_bboxes(
     pred_format="cells",
     box_format="midpoint",
     device=DEVICE,
+    S=7,
+    B=2,
+    C=20,
 ):
     all_pred_boxes = []
     all_true_boxes = []
@@ -259,8 +268,8 @@ def get_bboxes(
             predictions = model(x)
 
         batch_size = x.shape[0]
-        true_bboxes = cellboxes_to_boxes(labels)
-        bboxes = cellboxes_to_boxes(predictions)
+        true_bboxes = cellboxes_to_boxes(labels, S, B, C)
+        bboxes = cellboxes_to_boxes(predictions, S, B, C)
 
         for idx in range(batch_size):
             nms_boxes = non_max_suppression(
@@ -290,7 +299,7 @@ def get_bboxes(
 
 
 
-def convert_cellboxes(predictions, S=7):
+def convert_cellboxes(predictions, S=7, B=2, C=20):
     """
     Converts bounding boxes output from Yolo with
     an image split size of S into entire image ratios
@@ -303,21 +312,21 @@ def convert_cellboxes(predictions, S=7):
 
     predictions = predictions.to("cpu")
     batch_size = predictions.shape[0]
-    predictions = predictions.reshape(batch_size, 7, 7, 30)
-    bboxes1 = predictions[..., 21:25]
-    bboxes2 = predictions[..., 26:30]
+    predictions = predictions.reshape(batch_size, S, S, (C + 5 * B))
+    bboxes1 = predictions[..., (C + 1):(C + 5)]
+    bboxes2 = predictions[..., (C + 6):(C + 5 * B)]
     scores = torch.cat(
-        (predictions[..., 20].unsqueeze(0), predictions[..., 25].unsqueeze(0)), dim=0
+        (predictions[..., C].unsqueeze(0), predictions[..., (C + 5)].unsqueeze(0)), dim=0
     )
     best_box = scores.argmax(0).unsqueeze(-1)
     best_boxes = bboxes1 * (1 - best_box) + best_box * bboxes2
-    cell_indices = torch.arange(7).repeat(batch_size, 7, 1).unsqueeze(-1)
+    cell_indices = torch.arange(S).repeat(batch_size, S, 1).unsqueeze(-1)
     x = 1 / S * (best_boxes[..., :1] + cell_indices)
     y = 1 / S * (best_boxes[..., 1:2] + cell_indices.permute(0, 2, 1, 3))
     w_y = 1 / S * best_boxes[..., 2:4]
     converted_bboxes = torch.cat((x, y, w_y), dim=-1)
-    predicted_class = predictions[..., :20].argmax(-1).unsqueeze(-1)
-    best_confidence = torch.max(predictions[..., 20], predictions[..., 25]).unsqueeze(
+    predicted_class = predictions[..., :C].argmax(-1).unsqueeze(-1)
+    best_confidence = torch.max(predictions[..., C], predictions[..., (C + 5)]).unsqueeze(
         -1
     )
     converted_preds = torch.cat(
@@ -327,8 +336,8 @@ def convert_cellboxes(predictions, S=7):
     return converted_preds
 
 
-def cellboxes_to_boxes(out, S=7):
-    converted_pred = convert_cellboxes(out).reshape(out.shape[0], S * S, -1)
+def cellboxes_to_boxes(out, S=7, B=2, C=20):
+    converted_pred = convert_cellboxes(out, S, B, C).reshape(out.shape[0], S * S, -1)
     converted_pred[..., 0] = converted_pred[..., 0].long()
     all_bboxes = []
 
@@ -344,10 +353,13 @@ def cellboxes_to_boxes(out, S=7):
 def save_checkpoint(state, filename="my_checkpoint.pth.tar"):
     print("=> Saving checkpoint")
     torch.save(state, filename)
+    import os
+    print("checkpoint saved to: " + os.getcwd() + filename)
 
 
 def load_checkpoint(checkpoint, model, optimizer):
     print("=> Loading checkpoint")
+
     model.load_state_dict(checkpoint["state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer"])
 
