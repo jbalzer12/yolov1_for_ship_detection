@@ -63,7 +63,7 @@ if not(LOAD_MODEL):
     #OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135.txt', 'w') # HDF5 anstelle von .txt?
     OUTPUT.write('Train_mAP Mean_loss\n')
 
-'''
+
 class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms
@@ -76,7 +76,6 @@ class Compose(object):
 
 
 transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor()])
-'''
 
 # Training function
 def train_fn(train_loader, model, optimizer, loss_fn):
@@ -125,7 +124,7 @@ def main():
 
     train_dataset = Airbus_Dataset(
         "data/airbus-ship-detection/train.csv",
-        #transform=transform,
+        transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
         S=S,
@@ -135,7 +134,7 @@ def main():
 
     test_dataset = Airbus_Dataset(
         "data/airbus-ship-detection/val.csv", 
-        #transform=transform, 
+        transform=transform, 
         img_dir=IMG_DIR, 
         label_dir=LABEL_DIR,
         S=S,
