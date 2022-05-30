@@ -107,7 +107,7 @@ def main():
     cfg = parse_cfg(args.cfg)
     S, B, num_classes, input_size = cfg['S'], cfg['B'], cfg['num_classes'], cfg['input_size']
     dataset_cfg = parse_cfg(args.dataset_cfg)
-    IMG_DIR, LABEL_DIR = dataset_cfg['images'], dataset_cfg['labels']
+    IMG_DIR, LABEL_DIR, CLASS_NAMES = dataset_cfg['images'], dataset_cfg['labels'], dataset_cfg['class_names']
 
     # Initialize the model and move it to device
     model = Yolov1(split_size=S, num_boxes=B, num_classes=num_classes).to(DEVICE)
@@ -180,7 +180,7 @@ def main():
                 for idx in range(8):
                     bboxes = cellboxes_to_boxes(model(x), S=S, B=B, C=num_classes)
                     bboxes = non_max_suppression(bboxes[idx], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
-                    plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes)
+                    plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES)
 
                 import sys
                 sys.exit()
