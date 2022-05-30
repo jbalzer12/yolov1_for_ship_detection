@@ -169,18 +169,9 @@ def main():
             for x, y in train_loader:
                 x = x.to(DEVICE)
                 for idx in range(8):
-                    label_idx = None
                     bboxes = cellboxes_to_boxes(model(x))
                     bboxes = non_max_suppression(bboxes[idx], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
-                    for i in range(len(y[idx])):
-                        print('i:', i)
-                        for j in range(len(y[idx][i])):
-                            print('j:', j)
-                            for k in range(num_classes):
-                                if y[idx][i][j][k] == 1:
-                                    label_idx = k
-                    print('label_idx_after:', label_idx)
-                    plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES[label_idx])
+                    plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES)
 
                 import sys
                 sys.exit()

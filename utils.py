@@ -209,7 +209,7 @@ def mean_average_precision(
     return mean_average_precision, recalls_array, precisions_array # RECALL AND PRECISION SHOULD BE ADDED TO THE OUTPUT.dat
 
 
-def plot_image(image, boxes, label):
+def plot_image(image, boxes, class_names):
     """Plots predicted bounding boxes on the image"""
     im = np.array(image)
     height, width, _ = im.shape
@@ -222,8 +222,12 @@ def plot_image(image, boxes, label):
     # box[0] is x midpoint, box[2] is width
     # box[1] is y midpoint, box[3] is height
 
-    # Create a Rectangle potch
+    # Create a Rectangle patch.
+    # Each box contains a class label as well as (x,y) from the center 
+    # point and width and height of a bounding box.
     for box in boxes:
+        label = class_names[int(box[0])]
+        # From this point on, the class label is no longer part of the list 'box'
         box = box[2:]
         assert len(box) == 4, "Got more values than in x, y, w, h, in a box!"
         upper_left_x = box[0] - box[2] / 2
@@ -238,12 +242,12 @@ def plot_image(image, boxes, label):
         )
         # Add the patch to the Axes
         ax.add_patch(rect)
+        # Add text label to bounding box patch 
         plt.text(
             upper_left_x * width, 
             upper_left_y * height, 
             label,
             color='red',
-            fontweight='bold',
         )
 
     plt.show()
