@@ -1,5 +1,6 @@
 """
-Main file for training Yolo model on Pascal VOC dataset
+Main file for training Yolo model on airbus-ship-detection dataset 
+(source for dataset: https://www.kaggle.com/competitions/airbus-ship-detection/data)
 
 """
 import os
@@ -12,7 +13,6 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from model import Yolov1
 from dataset import (
-    VOCDataset,
     Airbus_Dataset,
 )
 from utils import (
@@ -40,7 +40,7 @@ parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_airbus_135.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -123,7 +123,7 @@ def main():
         load_checkpoint(a, model, optimizer)
 
     train_dataset = Airbus_Dataset(
-        "data/airbus-ship-detection/train.csv",
+        "/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
@@ -133,7 +133,7 @@ def main():
     )
 
     test_dataset = Airbus_Dataset(
-        "data/airbus-ship-detection/val.csv", 
+        "/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
         transform=transform, 
         img_dir=IMG_DIR, 
         label_dir=LABEL_DIR,
@@ -174,6 +174,7 @@ def main():
 
         # In case a model gets loaded, images will be used by the model
         if LOAD_MODEL:
+            # x contains the image while y contains the label matrix 
             for x, y in train_loader:
                 x = x.to(DEVICE)
                 for idx in range(8):
