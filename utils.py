@@ -209,7 +209,7 @@ def mean_average_precision(
     return mean_average_precision, recalls_array, precisions_array # RECALL AND PRECISION SHOULD BE ADDED TO THE OUTPUT.dat
 
 
-def plot_image(image, boxes):
+def plot_image(image, boxes, label):
     """Plots predicted bounding boxes on the image"""
     im = np.array(image)
     height, width, _ = im.shape
@@ -238,6 +238,13 @@ def plot_image(image, boxes):
         )
         # Add the patch to the Axes
         ax.add_patch(rect)
+        plt.text(
+            upper_left_x * width, 
+            upper_left_y * height, 
+            label,
+            color='red',
+            fontweight='bold',
+        )
 
     plt.show()
 

@@ -104,7 +104,7 @@ def main():
     cfg = parse_cfg(args.cfg)
     S, B, num_classes, input_size = cfg['S'], cfg['B'], cfg['num_classes'], cfg['input_size']
     dataset_cfg = parse_cfg(args.dataset_cfg)
-    IMG_DIR, LABEL_DIR = dataset_cfg['images'], dataset_cfg['labels']
+    IMG_DIR, LABEL_DIR, CLASS_NAMES = dataset_cfg['images'], dataset_cfg['labels'], dataset_cfg['class_names']
 
     # Initialize the model and move it to device
     model = Yolov1(split_size=S, num_boxes=B, num_classes=num_classes).to(DEVICE)
@@ -125,10 +125,13 @@ def main():
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
-    )
+    ) 
 
     test_dataset = VOCDataset(
-        "data/VOC2007_2012/test.csv", transform=transform, img_dir=IMG_DIR, label_dir=LABEL_DIR,
+        "data/VOC2007_2012/test.csv", 
+        transform=transform, 
+        img_dir=IMG_DIR, 
+        label_dir=LABEL_DIR,
     )
 
     train_loader = DataLoader(
@@ -139,6 +142,7 @@ def main():
         shuffle=True,
         drop_last=True,
     )
+
 
     test_loader = DataLoader(
         dataset=test_dataset,
@@ -164,12 +168,19 @@ def main():
         if LOAD_MODEL:
             for x, y in train_loader:
                 x = x.to(DEVICE)
-                torch.save(y, 'label_matrix.txt')
-                print('close')
                 for idx in range(8):
+                    label_idx = None
                     bboxes = cellboxes_to_boxes(model(x))
                     bboxes = non_max_suppression(bboxes[idx], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
-                    plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes)
+                    for i in range(len(y[idx])):
+                        print('i:', i)
+                        for j in range(len(y[idx][i])):
+                            print('j:', j)
+                            for k in range(num_classes):
+                                if y[idx][i][j][k] == 1:
+                                    label_idx = k
+                    print('label_idx_after:', label_idx)
+                    plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES[label_idx])
 
                 import sys
                 sys.exit()
