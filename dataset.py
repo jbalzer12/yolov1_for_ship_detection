@@ -108,6 +108,7 @@ class Airbus_Dataset(torch.utils.data.Dataset):
         boxes = []
         with open(label_path) as f:
             for label in f.readlines():
+                class_label, x, y, width, height = 1, 0, 0, 0, 0
                 class_label, x, y, width, height = [
                     float(x) if float(x) != int(float(x)) else int(x)
                     for x in label.replace("\n", "").split()
