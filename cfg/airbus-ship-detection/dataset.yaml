@@ -1,8 +1,8 @@
 # dataset images folder
-images: data/airbus-ship-detection/train/images
+images: /scratch/tmp/jbalzer/data/airbus-ship-detection/train/images
 
 # dataset labels folder
-labels: data/airbus-ship-detection/train/labels
+labels: /scratch/tmp/jbalzer/data/airbus-ship-detection/train/labels
 
 # class names
 class names: [ 'ship' ]
