@@ -5,4 +5,4 @@ images: /scratch/tmp/jbalzer/data/airbus-ship-detection/train/images
 labels: /scratch/tmp/jbalzer/data/airbus-ship-detection/train/labels
 
 # class names
-class names: [ 'ship' ]
+class_names: [ 'ship', 'empty' ]
