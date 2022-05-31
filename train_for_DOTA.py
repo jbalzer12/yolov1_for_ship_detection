@@ -11,7 +11,7 @@ import torchvision.transforms.functional as FT
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from model import Yolov1
-from dataset import VOCDataset
+from dataset import Other_Dataset
 from utils import (
     non_max_suppression,
     mean_average_precision,
@@ -54,10 +54,9 @@ if args.load_model == 'True':
 elif args.load_model == 'False':
     LOAD_MODEL = False
 LOAD_MODEL_FILE = args.model_path
-# IMG_DIR = "data/VOC2007_2012/images"
-# LABEL_DIR = "data/VOC2007_2012/labels"
 
-OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_DOTA_135.txt', 'w') # HDF5 anstelle von .txt?
+# OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_DOTA_135.txt', 'w') # HDF5 anstelle von .txt?
+OUTPUT = open('output_DOTA_135.txt', 'w') # HDF5 anstelle von .txt?
 OUTPUT.write('Train_mAP Mean_loss\n')
 
 class Compose(object):
@@ -90,15 +89,11 @@ def train_fn(train_loader, model, optimizer, loss_fn):
         # update progress bar
         loop.set_postfix(loss=loss.item())
 
-    #OUTPUT.write(f"Mean loss was: {sum(mean_loss)/len(mean_loss)}\n")
     OUTPUT.write(f' {sum(mean_loss)/len(mean_loss)}\n')
     print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
 
 
 def main():
-
-    # OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output100examples.txt', 'a') # HDF5 anstelle von .txt?
-
     print('Working Device: ', DEVICE)    
     cfg = parse_cfg(args.cfg)
     S, B, num_classes, input_size = cfg['S'], cfg['B'], cfg['num_classes'], cfg['input_size']
@@ -110,21 +105,32 @@ def main():
     optimizer = optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
     )
-    loss_fn = YoloLoss()
+    loss_fn = YoloLoss(S=7, B=2, C=num_classes)
 
 
     if LOAD_MODEL:
         load_checkpoint(torch.load(LOAD_MODEL_FILE), model, optimizer)
 
-    train_dataset = VOCDataset(
+    train_dataset = Other_Dataset(
         "data/DOTA-v2.0/train.csv",
+        # "/scratch/tmp/jbalzer/data/DOTA-v2.0/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
+        S=7,
+        B=2,
+        C=num_classes
     )
 
-    test_dataset = VOCDataset(
-        "data/DOTA-v2.0/val.csv", transform=transform, img_dir=IMG_DIR, label_dir=LABEL_DIR,
+    test_dataset = Other_Dataset(
+        "data/DOTA-v2.0/val.csv", 
+        # "/scratch/tmp/jbalzer/data/DOTA-v2.0/val.csv",
+        transform=transform, 
+        img_dir=IMG_DIR, 
+        label_dir=LABEL_DIR,
+        S=7,
+        B=2,
+        C=num_classes
     )
 
     train_loader = DataLoader(
@@ -152,7 +158,8 @@ def main():
 
         now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
         print("epoch:", epoch, "/ 135 =>", epoch / 135 * 100, "%, date/time:", now)
-        NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs.txt', 'w') # file to check the progress
+        #NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs_DOTA_135.txt', 'w') # file to check the progress
+        NUM_EPOCH = open('numberofepochs_DOTA_135.txt', 'w') # file to check the progress
         NUM_EPOCH.write("epoch:" + str(epoch) + "/ 135 =>" + str(epoch / 135 * 100) + "%, date/time:" + str(now))
         NUM_EPOCH.close()
 
@@ -169,28 +176,16 @@ def main():
                 sys.exit()
 
         pred_boxes, target_boxes = get_bboxes(
-            train_loader, model, iou_threshold=0.5, threshold=0.4
+            train_loader, model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes
         )
 
         mean_avg_prec = mean_average_precision(
-            pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint"
+            pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
         )
 
         #OUTPUT.write(f"Train mAP: {mean_avg_prec}\n")
         OUTPUT.write(f'{mean_avg_prec}')
         print(f"Train mAP: {mean_avg_prec}")
-
-        '''
-        if mean_avg_prec > 0.95:
-            checkpoint = {
-                "state_dict": model.state_dict(),
-                "optimizer": optimizer.state_dict(),
-            }
-            save_checkpoint(checkpoint, filename=LOAD_MODEL_FILE)
-            import time
-            sys.exit()
-            time.sleep(10)
-        '''
 
         train_fn(train_loader, model, optimizer, loss_fn)
 
