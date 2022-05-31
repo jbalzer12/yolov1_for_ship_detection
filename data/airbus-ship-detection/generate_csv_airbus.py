@@ -65,7 +65,7 @@ def generate_csv():
     val_file.close()
 
 
-    
+
 
 if __name__ == "__main__":
     #remove_label_files()
