@@ -31,13 +31,13 @@ seed = 123
 torch.manual_seed(seed)
 
 parser = argparse.ArgumentParser(description='YOLOv1-pytorch')
-parser.add_argument("--cfg", "-c", default="cfg/yolov1.yaml", help="Yolov1 config file path", type=str)
-parser.add_argument("--dataset_cfg", "-d", default="cfg/dataset.yaml", help="Dataset config file path", type=str)
+parser.add_argument("--cfg", "-c", default="cfg/DOTA-v2.0/yolov1.yaml", help="Yolov1 config file path", type=str)
+parser.add_argument("--dataset_cfg", "-d", default="cfg/DOTA-v2.0/dataset.yaml", help="Dataset config file path", type=str)
 parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=int)
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_DOTA_135.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -57,7 +57,7 @@ LOAD_MODEL_FILE = args.model_path
 # IMG_DIR = "data/VOC2007_2012/images"
 # LABEL_DIR = "data/VOC2007_2012/labels"
 
-OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output.txt', 'w') # HDF5 anstelle von .txt?
+OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_DOTA_135.txt', 'w') # HDF5 anstelle von .txt?
 OUTPUT.write('Train_mAP Mean_loss\n')
 
 class Compose(object):
@@ -117,15 +117,14 @@ def main():
         load_checkpoint(torch.load(LOAD_MODEL_FILE), model, optimizer)
 
     train_dataset = VOCDataset(
-        #"data/VOC2007_2012/100examples.csv",
-        "data/VOC2007_2012/train.csv",
+        "data/DOTA-v2.0/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
     )
 
     test_dataset = VOCDataset(
-        "data/VOC2007_2012/test.csv", transform=transform, img_dir=IMG_DIR, label_dir=LABEL_DIR,
+        "data/DOTA-v2.0/val.csv", transform=transform, img_dir=IMG_DIR, label_dir=LABEL_DIR,
     )
 
     train_loader = DataLoader(
