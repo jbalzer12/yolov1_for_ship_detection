@@ -116,6 +116,7 @@ def main():
     optimizer = optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
     )
+    loss_fn = YoloLoss()
 
     # In case a model gets loaded the checkpoint gets loaded
     if LOAD_MODEL:
