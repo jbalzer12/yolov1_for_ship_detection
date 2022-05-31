@@ -13,7 +13,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 from model import Yolov1
 from dataset import (
-    Airbus_Dataset,
+    Other_Dataset,
 )
 from utils import (
     non_max_suppression,
@@ -116,14 +116,14 @@ def main():
     optimizer = optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
     )
-    loss_fn = YoloLoss()
+    loss_fn = YoloLoss(S=7, B=2, C=num_classes)
 
     # In case a model gets loaded the checkpoint gets loaded
     if LOAD_MODEL:
         a = torch.load(LOAD_MODEL_FILE, map_location=torch.device('cpu'))
         load_checkpoint(a, model, optimizer)
 
-    train_dataset = Airbus_Dataset(
+    train_dataset = Other_Dataset(
         "/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
         # "data/airbus-ship-detection/train.csv",
         transform=transform,
@@ -134,7 +134,7 @@ def main():
         C=num_classes,
     )
 
-    test_dataset = Airbus_Dataset(
+    test_dataset = Other_Dataset(
         "/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
         # "data/airbus-ship-detection/val.csv",
         transform=transform, 

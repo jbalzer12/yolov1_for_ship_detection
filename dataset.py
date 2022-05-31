@@ -90,7 +90,7 @@ class VOCDataset(torch.utils.data.Dataset):
 
         return image, label_matrix
 
-class Airbus_Dataset(torch.utils.data.Dataset):
+class Other_Dataset(torch.utils.data.Dataset):
     def __init__(
         self, csv_file, img_dir, label_dir, S=7, B=2, C=1, transform=None, # These hyperparameters might be useful to change
     ):
