@@ -124,6 +124,7 @@ def main():
 
     train_dataset = Airbus_Dataset(
         "/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
+        # "data/airbus-ship-detection/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
@@ -134,6 +135,7 @@ def main():
 
     test_dataset = Airbus_Dataset(
         "/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
+        # "data/airbus-ship-detection/val.csv",
         transform=transform, 
         img_dir=IMG_DIR, 
         label_dir=LABEL_DIR,
