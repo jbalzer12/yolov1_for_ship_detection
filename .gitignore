@@ -6,7 +6,9 @@ data/airbus-ship-detection/val
 data/airbus-ship-detection/test_v2
 data/airbus-ship-detection/sample_submission_v2.csv
 data/airbus-ship-detection/train_ship_segmentations_v2.csv
-data/DOTA-v2.0
+data/DOTA-v2.0/test-dev
+data/DOTA-v2.0/train
+data/DOTA-v2.0/val
 data/VOC2007_2012
 __pycache__
 submit
