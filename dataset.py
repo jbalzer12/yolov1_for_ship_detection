@@ -6,6 +6,8 @@ import torch
 import os
 import pandas as pd
 from PIL import Image
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class VOCDataset(torch.utils.data.Dataset):
     def __init__(
@@ -110,7 +112,7 @@ class Airbus_Dataset(torch.utils.data.Dataset):
             for label in f.readlines():
                 class_label, x, y, width, height = 1, 0, 0, 0, 0
                 class_label, x, y, width, height = [
-                    float(x) if float(x) != int(float(x)) else int(x)
+                    float(x) if float(x) != int(float(x)) else int(float(x))
                     for x in label.replace("\n", "").split()
                 ]
 
