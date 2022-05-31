@@ -1,1 +1,1 @@
-source: https://captain-whu.github.io/DOTA/dataset.html
+source: https://captain-whu.github.io/DOTA/dataset.html (May 2022)
