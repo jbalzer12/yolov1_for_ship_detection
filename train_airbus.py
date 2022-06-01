@@ -50,7 +50,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = args.batch_size # 64 in original paper but I don't have that much vram, grad accum?
 WEIGHT_DECAY = 0.0005
 EPOCHS = args.epochs
-NUM_WORKERS = 2
+NUM_WORKERS = 15
 PIN_MEMORY = True
 if args.load_model == 'True':
     LOAD_MODEL = True # DEFAULT MODUS: training
@@ -83,7 +83,7 @@ def train_fn(train_loader, model, optimizer, loss_fn):
     loop = tqdm(train_loader, leave=True) 
     mean_loss = []
 
-
+    print('entered train_fn')
     for batch_idx, (x, y) in enumerate(loop):
         x, y = x.to(DEVICE), y.to(DEVICE)
         out = model(x)
@@ -124,8 +124,8 @@ def main():
         load_checkpoint(a, model, optimizer)
 
     train_dataset = Other_Dataset(
-        "/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
-        # "data/airbus-ship-detection/train.csv",
+        #"/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
+        "data/airbus-ship-detection/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
@@ -135,8 +135,8 @@ def main():
     )
 
     test_dataset = Other_Dataset(
-        "/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
-        # "data/airbus-ship-detection/val.csv",
+        #"/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
+        "data/airbus-ship-detection/val.csv",
         transform=transform, 
         img_dir=IMG_DIR, 
         label_dir=LABEL_DIR,

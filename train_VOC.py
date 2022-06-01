@@ -56,7 +56,8 @@ elif args.load_model == 'False':
 LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
-    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_SDG.txt', 'w') # HDF5 anstelle von .txt?
+    # OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_SDG.txt', 'w') # HDF5 anstelle von .txt?
+    OUTPUT = open('output_VOC.txt', 'w') # HDF5 anstelle von .txt?
     OUTPUT.write('Train_mAP Mean_loss\n')
 
 class Compose(object):
@@ -161,7 +162,8 @@ def main():
             now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
             print("epoch:", epoch, f"/ {args.epochs} =>", epoch / args.epochs * 100, "%, date/time:", now)    
             # file to check the progress
-            NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs.txt', 'w') 
+            # NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs.txt', 'w') 
+            NUM_EPOCH = open('numberofepochs_VOC.txt', 'w') 
             NUM_EPOCH.write("epoch:" + str(epoch) + f"/ {args.epochs} =>" + str(epoch / args.epochs * 100) + "%, date/time:" + str(now))
             NUM_EPOCH.close()
 
