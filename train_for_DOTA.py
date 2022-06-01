@@ -1,5 +1,6 @@
 """
-Main file for training Yolo model on Pascal VOC dataset
+Main file for training Yolo model on DOTA-v2.0 dataset
+source: https://captain-whu.github.io/DOTA/dataset.html
 
 """
 import os
@@ -11,7 +12,9 @@ import torchvision.transforms.functional as FT
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from model import Yolov1
-from dataset import Other_Dataset
+from dataset import (
+    Other_Dataset,
+)
 from utils import (
     non_max_suppression,
     mean_average_precision,
@@ -55,7 +58,7 @@ elif args.load_model == 'False':
     LOAD_MODEL = False
 LOAD_MODEL_FILE = args.model_path
 
-# OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_DOTA_135.txt', 'w') # HDF5 anstelle von .txt?
+#OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_DOTA_135.txt', 'w') # HDF5 anstelle von .txt?
 OUTPUT = open('output_DOTA_135.txt', 'w') # HDF5 anstelle von .txt?
 OUTPUT.write('Train_mAP Mean_loss\n')
 
@@ -70,7 +73,7 @@ class Compose(object):
         return img, bboxes
 
 
-transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor(),])
+transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor()])
 
 
 def train_fn(train_loader, model, optimizer, loss_fn):
@@ -98,7 +101,7 @@ def main():
     cfg = parse_cfg(args.cfg)
     S, B, num_classes, input_size = cfg['S'], cfg['B'], cfg['num_classes'], cfg['input_size']
     dataset_cfg = parse_cfg(args.dataset_cfg)
-    IMG_DIR, LABEL_DIR = dataset_cfg['images'], dataset_cfg['labels']
+    IMG_DIR, LABEL_DIR, CLASS_NAMES = dataset_cfg['images'], dataset_cfg['labels'], dataset_cfg['class_names']
 
 
     model = Yolov1(split_size=S, num_boxes=B, num_classes=num_classes).to(DEVICE)
@@ -109,27 +112,28 @@ def main():
 
 
     if LOAD_MODEL:
-        load_checkpoint(torch.load(LOAD_MODEL_FILE), model, optimizer)
+        a = torch.load(LOAD_MODEL_FILE, map_location=torch.device('cpu'))
+        load_checkpoint(a, model, optimizer)
 
     train_dataset = Other_Dataset(
         "data/DOTA-v2.0/train.csv",
-        # "/scratch/tmp/jbalzer/data/DOTA-v2.0/train.csv",
+        #"/scratch/tmp/jbalzer/data/DOTA-v2.0/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
-        S=7,
-        B=2,
+        S=S,
+        B=B,
         C=num_classes
     )
 
     test_dataset = Other_Dataset(
         "data/DOTA-v2.0/val.csv", 
-        # "/scratch/tmp/jbalzer/data/DOTA-v2.0/val.csv",
+        #"/scratch/tmp/jbalzer/data/DOTA-v2.0/val.csv",
         transform=transform, 
         img_dir=IMG_DIR, 
         label_dir=LABEL_DIR,
-        S=7,
-        B=2,
+        S=S,
+        B=B,
         C=num_classes
     )
 
@@ -156,27 +160,29 @@ def main():
 
     for epoch in range(EPOCHS):
 
-        now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
-        print("epoch:", epoch, "/ 135 =>", epoch / 135 * 100, "%, date/time:", now)
-        #NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs_DOTA_135.txt', 'w') # file to check the progress
-        NUM_EPOCH = open('numberofepochs_DOTA_135.txt', 'w') # file to check the progress
-        NUM_EPOCH.write("epoch:" + str(epoch) + "/ 135 =>" + str(epoch / 135 * 100) + "%, date/time:" + str(now))
-        NUM_EPOCH.close()
+        if not(LOAD_MODEL): 
+            now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
+            print("epoch:", epoch, f"/ {args.epochs} =>", epoch / args.epochs * 100, "%, date/time:", now)    
+            # file to check the progress
+            #NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs_DOTA_135.txt', 'w') 
+            NUM_EPOCH = open('numberofepochs_DOTA_135.txt', 'w') 
+            NUM_EPOCH.write("epoch:" + str(epoch) + f"/ {args.epochs} =>" + str(epoch / args.epochs * 100) + "%, date/time:" + str(now))
+            NUM_EPOCH.close()
 
         
-        if LOAD_MODEL == True:
+        if LOAD_MODEL:
             for x, y in train_loader:
                 x = x.to(DEVICE)
                 for idx in range(8):
-                    bboxes = cellboxes_to_boxes(model(x))
+                    bboxes = cellboxes_to_boxes(model(x), S=S, B=B, C=num_classes)
                     bboxes = non_max_suppression(bboxes[idx], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
-                    plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes)
+                    plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES)
 
                 import sys
                 sys.exit()
 
         pred_boxes, target_boxes = get_bboxes(
-            train_loader, model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes
+            loader=train_loader, model=model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes
         )
 
         mean_avg_prec = mean_average_precision(
