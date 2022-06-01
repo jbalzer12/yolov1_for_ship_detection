@@ -53,7 +53,7 @@ class YoloLoss(nn.Module):
         # predictions, which is the one with highest Iou calculated previously.
         box_predictions = exists_box * (
             (
-                bestbox * predictions[(self.C+6):(self.C + self.B * 5)]
+                bestbox * predictions[..., (self.C+6):(self.C + self.B * 5)]
                 + (1 - bestbox) * predictions[..., (self.C+1):(self.C+5)]
             )
         )
