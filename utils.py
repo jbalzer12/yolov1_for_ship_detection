@@ -206,7 +206,7 @@ def mean_average_precision(
         average_precisions.append(torch.trapz(precisions, recalls))
         
     mean_average_precision = sum(average_precisions) / len(average_precisions)
-    return mean_average_precision, recalls_array, precisions_array # RECALL AND PRECISION SHOULD BE ADDED TO THE OUTPUT.dat
+    return mean_average_precision  # RECALL AND PRECISION SHOULD BE ADDED TO THE OUTPUT.dat
 
 
 def plot_image(image, boxes, class_names):
@@ -270,7 +270,6 @@ def get_bboxes(
     # make sure model is in eval before get bboxes
     model.eval()
     train_idx = 0
-
     for batch_idx, (x, labels) in enumerate(loader):
         x = x.to(device)
         labels = labels.to(device)
