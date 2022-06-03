@@ -8,6 +8,7 @@ import pandas as pd
 from PIL import Image
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+Image.MAX_IMAGE_PIXELS = None
 
 class VOCDataset(torch.utils.data.Dataset):
     def __init__(
