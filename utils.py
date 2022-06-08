@@ -142,11 +142,11 @@ def mean_average_precision(
         # for each training example, so let's say img 0 has 3,
         # img 1 has 5 then we will obtain a dictionary with:
         # amount_bboxes = {0:3, 1:5}
-        amount_bboxes = Counter([gt[0] for gt in ground_truths])
+        amount_bboxes = Counter([gt[0] for gt in ground_truths]) 
 
         # We then go through each key, val in this dictionary
         # and convert to the following (w.r.t same example):
-        # ammount_bboxes = {0:torch.tensor[0,0,0], 1:torch.tensor[0,0,0,0,0]}
+        # amount_bboxes = {0:torch.tensor[0,0,0], 1:torch.tensor[0,0,0,0,0]}
         for key, val in amount_bboxes.items():
             amount_bboxes[key] = torch.zeros(val)
 
@@ -249,7 +249,6 @@ def plot_image(image, boxes, class_names):
             label,
             color='red',
         )
-
     plt.show()
 
 def get_bboxes(

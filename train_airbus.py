@@ -40,7 +40,7 @@ parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_airbus_135.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_airbus_135_train_loader.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -60,7 +60,7 @@ LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
     OUTPUT = open('output_airbus_135.txt', 'w') # HDF5 anstelle von .txt?
-    #OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135.txt', 'w') # HDF5 anstelle von .txt?
+    #OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_train_loader.txt', 'w') # HDF5 anstelle von .txt?
     OUTPUT.write('Train_mAP Mean_loss\n')
 
 
@@ -83,7 +83,6 @@ def train_fn(train_loader, model, optimizer, loss_fn):
     loop = tqdm(train_loader, leave=True) 
     mean_loss = []
 
-    print('entered train_fn')
     for batch_idx, (x, y) in enumerate(loop):
         x, y = x.to(DEVICE), y.to(DEVICE)
         out = model(x)
@@ -126,6 +125,7 @@ def main():
     train_dataset = Other_Dataset(
         #"/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
         "data/airbus-ship-detection/train.csv",
+        #"data/DOTA-v2.0/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
@@ -137,6 +137,7 @@ def main():
     test_dataset = Other_Dataset(
         #"/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
         "data/airbus-ship-detection/val.csv",
+        #"data/DOTA-v2.0/val.csv",
         transform=transform, 
         img_dir=IMG_DIR, 
         label_dir=LABEL_DIR,
@@ -170,20 +171,21 @@ def main():
             now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
             print("epoch:", epoch, f"/ {args.epochs} =>", epoch / args.epochs * 100, "%, date/time:", now)    
             # file to check the progress
-            #NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs.txt', 'w') 
-            NUM_EPOCH = open('numberofepochs.txt', 'w') 
-            NUM_EPOCH.write("epoch:" + str(epoch) + f"/ {args.epochs} =>" + str(epoch / args.epochs * 100) + "%, date/time:" + str(now))
-            NUM_EPOCH.close()
+            #NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs_airbus_train_loader.txt', 'w') 
+            
+            #NUM_EPOCH = open('numberofepochs.txt', 'w') 
+            #NUM_EPOCH.write("epoch:" + str(epoch) + f"/ {args.epochs} =>" + str(epoch / args.epochs * 100) + "%, date/time:" + str(now))
+            #NUM_EPOCH.close()
 
         # In case a model gets loaded, images will be used by the model
         if LOAD_MODEL:
             # x contains the image while y contains the label matrix 
-            for x, y in train_loader:
+            for x, y in test_loader:
                 x = x.to(DEVICE)
                 for idx in range(8):
                     bboxes = cellboxes_to_boxes(model(x), S=S, B=B, C=num_classes)
-                    bboxes = non_max_suppression(bboxes[idx], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
-                    plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES)
+                    bboxes = non_max_suppression(bboxes[idx+3], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
+                    plot_image(x[idx+3].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES)
 
                 import sys
                 sys.exit()
@@ -197,13 +199,13 @@ def main():
         )
 
         #OUTPUT.write(f"Train mAP: {mean_avg_prec}\n")
-        OUTPUT.write(f'{mean_avg_prec}')
+        #OUTPUT.write(f'{mean_avg_prec}')
         print(f"Train mAP: {mean_avg_prec}")
 
         # The training function gets called
         train_fn(train_loader, model, optimizer, loss_fn)
 
-    OUTPUT.close()
+    #OUTPUT.close()
     
     # the following lines were added to make sure the procession stops after the full range of epochs and not 
     # at the point of a specific mean average precision 

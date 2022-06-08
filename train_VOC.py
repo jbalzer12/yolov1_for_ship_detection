@@ -37,7 +37,7 @@ parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_VOC_new.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -47,7 +47,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = args.batch_size # 64 in original paper but I don't have that much vram, grad accum?
 WEIGHT_DECAY = 0.0005
 EPOCHS = args.epochs
-NUM_WORKERS = 2
+NUM_WORKERS = 15
 PIN_MEMORY = True
 if args.load_model == 'True':
     LOAD_MODEL = True # DEFAULT MODUS: training
@@ -57,7 +57,7 @@ LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
     # OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_SDG.txt', 'w') # HDF5 anstelle von .txt?
-    OUTPUT = open('output_VOC.txt', 'w') # HDF5 anstelle von .txt?
+    OUTPUT = open('output_VOC_new.txt', 'w') # HDF5 anstelle von .txt?
     OUTPUT.write('Train_mAP Mean_loss\n')
 
 class Compose(object):
@@ -82,13 +82,11 @@ def train_fn(train_loader, model, optimizer, loss_fn):
 
     for batch_idx, (x, y) in enumerate(loop):
         x, y = x.to(DEVICE), y.to(DEVICE)
-        print('label-matrix: ', str(y))
         out = model(x)
         loss = loss_fn(out, y)
         mean_loss.append(loss.item())
         optimizer.zero_grad()
         loss.backward()
-        print('optimizer: ' + str(optimizer))
         optimizer.step()
 
         # Update progress bar
@@ -123,6 +121,7 @@ def main():
 
     train_dataset = VOCDataset(
         #"data/VOC2007_2012/100examples.csv",
+        #"/scratch/tmp/jbalzer/data/VOC2007_2012/train.csv",
         "data/VOC2007_2012/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
@@ -130,6 +129,7 @@ def main():
     ) 
 
     test_dataset = VOCDataset(
+        #"/scratch/tmp/jbalzer/data/VOC2007_2012/test.csv", 
         "data/VOC2007_2012/test.csv", 
         transform=transform, 
         img_dir=IMG_DIR, 
@@ -144,7 +144,6 @@ def main():
         shuffle=True,
         drop_last=True,
     )
-
 
     test_loader = DataLoader(
         dataset=test_dataset,
@@ -162,25 +161,51 @@ def main():
             now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
             print("epoch:", epoch, f"/ {args.epochs} =>", epoch / args.epochs * 100, "%, date/time:", now)    
             # file to check the progress
-            # NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs.txt', 'w') 
-            NUM_EPOCH = open('numberofepochs_VOC.txt', 'w') 
-            NUM_EPOCH.write("epoch:" + str(epoch) + f"/ {args.epochs} =>" + str(epoch / args.epochs * 100) + "%, date/time:" + str(now))
-            NUM_EPOCH.close()
+            #NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs_VOC_new.txt', 'w') 
+            #NUM_EPOCH = open('numberofepochs_VOC_new.txt', 'w') 
+            #NUM_EPOCH.write("epoch:" + str(epoch) + f"/ {args.epochs} =>" + str(epoch / args.epochs * 100) + "%, date/time:" + str(now))
+            #NUM_EPOCH.close()
 
         # In case a model gets loaded, images will be used by the model
         if LOAD_MODEL:
-            for x, y in train_loader:
+            
+            '''from PIL import Image
+            img = Image.open('/Users/josefinabalzer/Desktop/SS22/BA/yolov1_for_ship_detection/data/VOC2007_2012/images/000050.jpg')
+            import numpy as np 
+            img = np.array(img)
+            img = torch.from_numpy(img)
+            img = img.permute(2,0,1)
+            img = img.reshape((1,3,375,500))
+            model_img = model(img)
+            torch.save(model_img, 'single_img/model.pt')
+            bboxes_img = cellboxes_to_boxes(model_img, S, B, num_classes)
+            torch.save(bboxes_img, 'single_img/bboxes.pt')
+            
+            exit()'''
+            
+            #for x, y in train_loader:
+            for x, y in test_loader:
+                with torch.no_grad():
+                    model.eval()
                 x = x.to(DEVICE)
                 for idx in range(8):
-                    bboxes = cellboxes_to_boxes(model(x))
-                    bboxes = non_max_suppression(bboxes[idx], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
-                    plot_image(x[idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES)
+                    start_idx = 0
+                    m = model(x)
+                    bboxes = cellboxes_to_boxes(m, S, B, num_classes)
+
+                    # average precision:
+
+
+                    bboxes = non_max_suppression(bboxes[idx+start_idx], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
+                    print('plot VOC')
+
+                    plot_image(x[idx+start_idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES)
 
                 import sys
                 sys.exit()
 
         pred_boxes, target_boxes = get_bboxes(
-            train_loader, model, iou_threshold=0.5, threshold=0.4
+            test_loader, model, iou_threshold=0.5, threshold=0.4
         )
 
         mean_avg_prec = mean_average_precision(

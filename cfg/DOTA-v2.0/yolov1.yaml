@@ -1,4 +1,4 @@
-S: 7
+S: 15
 B: 2
 num_classes: 18
 input_size: 448 # diverges

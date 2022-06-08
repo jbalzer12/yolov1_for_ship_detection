@@ -8,6 +8,7 @@ data/airbus-ship-detection/sample_submission_v2.csv
 data/airbus-ship-detection/train_ship_segmentations_v2.csv
 data/DOTA-v2.0/test-dev
 data/DOTA-v2.0/train
+data/DOTA-v2.0/labelTxt_all
 data/DOTA-v2.0/val
 data/DOTA-v2.0/images
 data/DOTA-v2.0/labels
@@ -15,3 +16,11 @@ data/VOC2007_2012
 __pycache__
 submit
 .vscode
+OLD_train_for_DOTA.py
+cfg
+submit_VOC
+submit.DOTA
+x.pt
+y.pt
+modelx.pt
+bboxes.pt
