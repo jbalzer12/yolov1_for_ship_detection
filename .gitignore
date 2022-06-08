@@ -19,7 +19,7 @@ submit
 OLD_train_for_DOTA.py
 cfg
 submit_VOC
-submit.DOTA
+submit_DOTA
 x.pt
 y.pt
 modelx.pt
