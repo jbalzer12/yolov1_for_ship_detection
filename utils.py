@@ -8,6 +8,7 @@ import yaml
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def intersection_over_union(boxes_preds, boxes_labels, box_format="midpoint"):
+    torch.save(boxes_preds,'boxes_preds.pt')
     """
     Calculates intersection over union
 
@@ -175,7 +176,7 @@ def mean_average_precision(
                     torch.tensor(detection[3:]),
                     torch.tensor(gt[3:]),
                     box_format=box_format,
-                )
+                )   
 
                 if iou > best_iou:
                     best_iou = iou
@@ -251,6 +252,28 @@ def plot_image(image, boxes, class_names):
         )
     plt.show()
 
+def yolo_label_to_bbox(label, img):
+    '''
+    label: list[class, center_x, center_y, width, height]
+    img: tensor[num_channels, height, width]
+    '''
+    _, height, width = img.shape
+    upper_left_x = (label[1] * width) - (label[3] * width / 2)
+    upper_left_y = (label[2] * height) - (label[4] * height / 2)
+    rect = patches.Rectangle(
+        (upper_left_x * width, upper_left_y * height),
+        label[3] * width,
+        label[4] * height, 
+        linewidth=1,
+        edgecolor="r",
+        facecolor="none",
+    )
+    fig, ax = plt.subplots(1)
+    ax.imshow(img.permute(1,2,0))
+    ax.add_patch(rect)
+    plt.show()
+
+
 def get_bboxes(
     loader,
     model,
@@ -265,11 +288,12 @@ def get_bboxes(
 ):
     all_pred_boxes = []
     all_true_boxes = []
-
+    
     # make sure model is in eval before get bboxes
     model.eval()
     train_idx = 0
-    for batch_idx, (x, labels) in enumerate(loader):
+    for batch_idx, (x, labels) in enumerate(loader): # (x, labels) ist immer eine Batch-Size groß (64 Bilder + Labels)
+        #print('batch_idx:',batch_idx)
         x = x.to(device)
         labels = labels.to(device)
 
@@ -277,8 +301,8 @@ def get_bboxes(
             predictions = model(x)
 
         batch_size = x.shape[0]
-        true_bboxes = cellboxes_to_boxes(labels, S, B, C)
-        bboxes = cellboxes_to_boxes(predictions, S, B, C)
+        true_bboxes = cellboxes_to_boxes(labels, S, B, C) # labels and predictions are totally different things
+        bboxes = cellboxes_to_boxes(predictions, S, B, C) # labels.shape = [64, 7, 7, 30] WHILE predictions.shape = [64, 1470]
 
         for idx in range(batch_size):
             nms_boxes = non_max_suppression(
@@ -287,20 +311,26 @@ def get_bboxes(
                 threshold=threshold,
                 box_format=box_format,
             )
-
-
-            #if batch_idx == 0 and idx == 0:
-            #    plot_image(x[idx].permute(1,2,0).to("cpu"), nms_boxes)
-            #    print(nms_boxes)
+            
+            #############
+            
+            '''
+            CLASS_NAMES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'dining table', 'dog', 'horse', 'motorbike', 'person', 'potted plant', 'sheep', 'sofa', 'train', 'tvmonitor']
+            if batch_idx == 0 and idx >= 10: # == 0 changed to >= 10
+                plot_image(x[idx].permute(1,2,0).to("cpu"), nms_boxes, CLASS_NAMES)
+                print('nms:',nms_boxes)
+            '''
+            
+            #############
 
             for nms_box in nms_boxes:
                 all_pred_boxes.append([train_idx] + nms_box)
 
-            for box in true_bboxes[idx]:
+            for box in true_bboxes[idx]: # WARUM PASSIERT DAS HIER???
                 # many will get converted to 0 pred
                 if box[1] > threshold:
                     all_true_boxes.append([train_idx] + box)
-
+            
             train_idx += 1
 
     model.train()

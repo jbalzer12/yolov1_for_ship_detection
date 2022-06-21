@@ -11,7 +11,7 @@ import torch.optim as optim
 import torchvision.transforms.functional as FT
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from model import Yolov1
+from model_modified import Yolov1
 from dataset import (
     Other_Dataset,
 )
@@ -40,7 +40,7 @@ parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_airbus_135_train_loader.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_airbus_135_896_resolution_B_14.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -50,7 +50,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = args.batch_size # 64 in original paper but I don't have that much vram, grad accum?
 WEIGHT_DECAY = 0.0005
 EPOCHS = args.epochs
-NUM_WORKERS = 15
+NUM_WORKERS = 63
 PIN_MEMORY = True
 if args.load_model == 'True':
     LOAD_MODEL = True # DEFAULT MODUS: training
@@ -59,8 +59,8 @@ elif args.load_model == 'False':
 LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
-    OUTPUT = open('output_airbus_135.txt', 'w') # HDF5 anstelle von .txt?
-    #OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_train_loader.txt', 'w') # HDF5 anstelle von .txt?
+    #OUTPUT = open('output_airbus_135.txt', 'w') # HDF5 anstelle von .txt?
+    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14.txt', 'w') # HDF5 anstelle von .txt?
     OUTPUT.write('Train_mAP Mean_loss\n')
 
 
@@ -75,7 +75,7 @@ class Compose(object):
         return img, bboxes
 
 
-transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor()])
+transform = Compose([transforms.Resize((896, 896)), transforms.ToTensor()]) # changed 448 to 1792 (448 * 4)
 
 # Training function
 def train_fn(train_loader, model, optimizer, loss_fn):
@@ -115,12 +115,13 @@ def main():
     optimizer = optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
     )
-    loss_fn = YoloLoss(S=7, B=2, C=num_classes)
+    loss_fn = YoloLoss(S=S, B=B, C=num_classes)
 
     # In case a model gets loaded the checkpoint gets loaded
     if LOAD_MODEL:
         a = torch.load(LOAD_MODEL_FILE, map_location=torch.device('cpu'))
         load_checkpoint(a, model, optimizer)
+
 
     train_dataset = Other_Dataset(
         #"/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
@@ -136,7 +137,7 @@ def main():
 
     test_dataset = Other_Dataset(
         #"/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
-        "data/airbus-ship-detection/val.csv",
+        "data/airbus-ship-detection/val-smaller.csv",
         #"data/DOTA-v2.0/val.csv",
         transform=transform, 
         img_dir=IMG_DIR, 
@@ -170,28 +171,23 @@ def main():
         if not(LOAD_MODEL): 
             now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
             print("epoch:", epoch, f"/ {args.epochs} =>", epoch / args.epochs * 100, "%, date/time:", now)    
-            # file to check the progress
-            #NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs_airbus_train_loader.txt', 'w') 
-            
-            #NUM_EPOCH = open('numberofepochs.txt', 'w') 
-            #NUM_EPOCH.write("epoch:" + str(epoch) + f"/ {args.epochs} =>" + str(epoch / args.epochs * 100) + "%, date/time:" + str(now))
-            #NUM_EPOCH.close()
 
         # In case a model gets loaded, images will be used by the model
         if LOAD_MODEL:
             # x contains the image while y contains the label matrix 
             for x, y in test_loader:
                 x = x.to(DEVICE)
+                start_idx = 8
                 for idx in range(8):
                     bboxes = cellboxes_to_boxes(model(x), S=S, B=B, C=num_classes)
-                    bboxes = non_max_suppression(bboxes[idx+3], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
-                    plot_image(x[idx+3].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES)
+                    bboxes = non_max_suppression(bboxes[idx+start_idx], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
+                    plot_image(x[idx+start_idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES)
 
                 import sys
                 sys.exit()
 
         pred_boxes, target_boxes = get_bboxes(
-            loader=train_loader, model=model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
+            loader=test_loader, model=model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
         )
 
         mean_avg_prec = mean_average_precision(
@@ -199,13 +195,13 @@ def main():
         )
 
         #OUTPUT.write(f"Train mAP: {mean_avg_prec}\n")
-        #OUTPUT.write(f'{mean_avg_prec}')
+        OUTPUT.write(f'{mean_avg_prec}')
         print(f"Train mAP: {mean_avg_prec}")
 
         # The training function gets called
         train_fn(train_loader, model, optimizer, loss_fn)
 
-    #OUTPUT.close()
+    OUTPUT.close()
     
     # the following lines were added to make sure the procession stops after the full range of epochs and not 
     # at the point of a specific mean average precision 

@@ -14,8 +14,7 @@ List is structured by tuples and lastly int with number of repeats
 """
 
 architecture_config = [
-    #(15, 64, 2, 7),
-    (7, 64, 2, 3), # muss hier überhaupt angefasst werden? Ich denke nicht...
+    (7, 64, 2, 3),
     "M",
     (3, 192, 1, 1),
     "M",
@@ -30,8 +29,9 @@ architecture_config = [
     "M",
     [(1, 512, 1, 0), (3, 1024, 1, 1), 2],
     (3, 1024, 1, 1),
-    (3, 1024, 2, 1), # 2 auf 1 setzen 
-    (3, 1024, 1, 1), 
+    (3, 1024, 2, 1),
+    # (3, 1024, 2, 1), # changed from (3, 1024, 1, 1) to resize images not to 448 but to 896
+    (3, 1024, 1, 1), # added for B=15
     (3, 1024, 1, 1),
 ]
 
@@ -54,12 +54,14 @@ class Yolov1(nn.Module):
         self.in_channels = in_channels
         self.darknet = self._create_conv_layers(self.architecture)
 
+        
         self.fcs = self._create_fcs(**kwargs)
 
     def forward(self, x):
+        #print('brfore:', x.shape)
         x = self.darknet(x)
-        print(x.size())
-        print(torch.flatten(x, start_dim=1).size())
+        #print('after darknet:', x.shape)
+        #print('flattened:', torch.flatten(x, start_dim=1).shape)
         return self.fcs(torch.flatten(x, start_dim=1))
 
     def _create_conv_layers(self, architecture):
@@ -113,11 +115,11 @@ class Yolov1(nn.Module):
         # nn.Linear(1024*S*S, 4096),
         # nn.LeakyReLU(0.1),
         # nn.Linear(4096, S*S*(B*5+C))
-        
+
         return nn.Sequential(
             nn.Flatten(),
-            nn.Linear(1024 * S * S, 496), # Hier liegt das Problem! Wenn sich S ändert, passt der Linear Layer nicht mehr. Dieses Problem wird wird nicht von der grundlegenden Architektur beeinflusst 
-            nn.Dropout(0.0),
+            nn.Linear(1024 * S * S, 4096),  # Hier liegt das Problem! Wenn sich S ändert, passt der Linear Layer nicht mehr. Dieses Problem wird wird nicht von der grundlegenden Architektur beeinflusst 
+            nn.Dropout(0.5),
             nn.LeakyReLU(0.1),
-            nn.Linear(496, S * S * (C + B * 5)), # classification layer?
+            nn.Linear(4096, S * S * (C + B * 5)), # classification layer?
         )

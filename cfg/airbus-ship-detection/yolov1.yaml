@@ -1,4 +1,4 @@
-S: 7 # Gridsize (n x n)
+S: 14 # Gridsize (n x n)
 B: 2 # Number of predicted bounding boxes
 num_classes: 2
 input_size: 768

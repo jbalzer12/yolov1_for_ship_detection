@@ -1,0 +1,2 @@
+Train_mAP Mean_loss
+0.0

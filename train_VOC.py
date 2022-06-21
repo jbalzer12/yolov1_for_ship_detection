@@ -37,7 +37,7 @@ parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_VOC_new.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_VOC_new_try.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -56,8 +56,8 @@ elif args.load_model == 'False':
 LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
-    # OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_SDG.txt', 'w') # HDF5 anstelle von .txt?
-    OUTPUT = open('output_VOC_new.txt', 'w') # HDF5 anstelle von .txt?
+    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_VOC_1000_dropout_changed.txt', 'w') # HDF5 anstelle von .txt?
+    #OUTPUT = open('output_VOC_new.txt', 'w') # HDF5 anstelle von .txt?
     OUTPUT.write('Train_mAP Mean_loss\n')
 
 class Compose(object):
@@ -112,6 +112,8 @@ def main():
     optimizer = optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
     )
+    # Maybe try this:
+    # optimizer = optim.SGD(model.parameterse(), lr=LEARNING_RATE, momentum=0.9, weight_decay=WEIGHT_DECAY)
     loss_fn = YoloLoss()
 
     # In case a model gets loaded the checkpoint gets loaded
@@ -121,16 +123,16 @@ def main():
 
     train_dataset = VOCDataset(
         #"data/VOC2007_2012/100examples.csv",
-        #"/scratch/tmp/jbalzer/data/VOC2007_2012/train.csv",
-        "data/VOC2007_2012/train.csv",
+        "/scratch/tmp/jbalzer/data/VOC2007_2012/train.csv",
+        #"data/VOC2007_2012/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
     ) 
 
     test_dataset = VOCDataset(
-        #"/scratch/tmp/jbalzer/data/VOC2007_2012/test.csv", 
-        "data/VOC2007_2012/test.csv", 
+        "/scratch/tmp/jbalzer/data/VOC2007_2012/test.csv", 
+        #"data/VOC2007_2012/test.csv", 
         transform=transform, 
         img_dir=IMG_DIR, 
         label_dir=LABEL_DIR,
@@ -160,42 +162,37 @@ def main():
         if not(LOAD_MODEL): 
             now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
             print("epoch:", epoch, f"/ {args.epochs} =>", epoch / args.epochs * 100, "%, date/time:", now)    
-            # file to check the progress
-            #NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs_VOC_new.txt', 'w') 
-            #NUM_EPOCH = open('numberofepochs_VOC_new.txt', 'w') 
-            #NUM_EPOCH.write("epoch:" + str(epoch) + f"/ {args.epochs} =>" + str(epoch / args.epochs * 100) + "%, date/time:" + str(now))
-            #NUM_EPOCH.close()
 
         # In case a model gets loaded, images will be used by the model
         if LOAD_MODEL:
-            
-            '''from PIL import Image
-            img = Image.open('/Users/josefinabalzer/Desktop/SS22/BA/yolov1_for_ship_detection/data/VOC2007_2012/images/000050.jpg')
-            import numpy as np 
-            img = np.array(img)
-            img = torch.from_numpy(img)
-            img = img.permute(2,0,1)
-            img = img.reshape((1,3,375,500))
-            model_img = model(img)
-            torch.save(model_img, 'single_img/model.pt')
-            bboxes_img = cellboxes_to_boxes(model_img, S, B, num_classes)
-            torch.save(bboxes_img, 'single_img/bboxes.pt')
-            
-            exit()'''
-            
-            #for x, y in train_loader:
-            for x, y in test_loader:
+            # TO DO: Calculate precision!
+
+            for x, y in train_loader:
+            #for x, y in test_loader: # y = labels
                 with torch.no_grad():
                     model.eval()
                 x = x.to(DEVICE)
-                for idx in range(8):
-                    start_idx = 0
-                    m = model(x)
-                    bboxes = cellboxes_to_boxes(m, S, B, num_classes)
+                #torch.save(x, 'data/VOC2007_2012/x.pt')
+                #torch.save(y, 'data/VOC2007_2012/y.pt')
+                
+                start_idx = 0
+                #with torch.no_grad():
+                 #       predictions = model(x) # Predictions
 
-                    # average precision:
+                # average_precision: 
+                pred_boxes, target_boxes = get_bboxes(
+                    train_loader, model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
+                )
+                mAP = mean_average_precision(pred_boxes, target_boxes)
+                print('mAP:', mAP)
+                #torch.save(pred_boxes, 'pred_boxes.pt')
+                #torch.save(target_boxes, 'target_boxes.pt')
+                #print('STOPP')
+                #exit()
 
-
+                for idx in range(8):    
+                    
+                    bboxes = cellboxes_to_boxes(model(x), S, B, num_classes)
                     bboxes = non_max_suppression(bboxes[idx+start_idx], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
                     print('plot VOC')
 
@@ -205,9 +202,10 @@ def main():
                 sys.exit()
 
         pred_boxes, target_boxes = get_bboxes(
-            test_loader, model, iou_threshold=0.5, threshold=0.4
+            test_loader, model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=20,
         )
-
+        #torch.save(pred_boxes, 'data/DOTA-v2.0/pred_boxes.pt')
+        #torch.save(target_boxes, 'data/DOTA-v2.0/target_boxes.pt')
         mean_avg_prec = mean_average_precision(
             pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
         )
@@ -218,6 +216,13 @@ def main():
 
         # The training function gets called
         train_fn(train_loader, model, optimizer, loss_fn)
+
+        if epoch == (100, 200, 300, 400, 500, 750):
+            checkpoint = {
+                "state_dict": model.state_dict(),
+                "optimizer": optimizer.state_dict(),
+            }
+            save_checkpoint(checkpoint, filename=f'{LOAD_MODEL_FILE}_{epoch}_epochs')
 
     OUTPUT.close()
     

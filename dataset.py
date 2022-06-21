@@ -120,7 +120,7 @@ class Other_Dataset(torch.utils.data.Dataset):
                 boxes.append([class_label, x, y, width, height])
 
         img_path = os.path.join(self.img_dir, self.annotations.iloc[index, 0])
-        image = Image.open(img_path)
+        image = Image.open(img_path) # Wo liegt der Unterschied zwischen dem Einlesen von png und jpg?
         boxes = torch.tensor(boxes)
 
         if self.transform:
