@@ -121,7 +121,7 @@ def main():
 
     # In case a model gets loaded the checkpoint gets loaded
     if LOAD_MODEL:
-        a = torch.load(LOAD_MODEL_FILE, map_location=torch.device('cpu'))
+        a = torch.load(LOAD_MODEL_FILE, map_location=DEVICE) #torch.device('cpu'))
         load_checkpoint(a, model, optimizer)
 
     train_dataset = Other_Dataset(
