@@ -8,7 +8,6 @@ import yaml
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def intersection_over_union(boxes_preds, boxes_labels, box_format="midpoint"):
-    torch.save(boxes_preds,'boxes_preds.pt')
     """
     Calculates intersection over union
 
@@ -406,7 +405,7 @@ def load_checkpoint(checkpoint, model, optimizer):
     # and it will lead to many hours of debugging \:
     for param_group in optimizer.param_groups:
         param_group["lr"] = lr
-        
+
 
 def parse_cfg(cfg_path):
     # cfg = {}
