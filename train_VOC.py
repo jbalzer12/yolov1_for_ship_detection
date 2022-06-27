@@ -37,7 +37,7 @@ parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_VOCDataset_train.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_VOCDataset_train_1000.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -56,7 +56,7 @@ elif args.load_model == 'False':
 LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
-    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_VOC_135_train.txt', 'w') # HDF5 anstelle von .txt?
+    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_VOC_1000_train.txt', 'w') # HDF5 anstelle von .txt?
     #OUTPUT = open('output_VOC_VOCDataset_test.txt', 'w') # HDF5 anstelle von .txt?
     OUTPUT.write('Train_mAP Mean_loss\n')
 
@@ -209,6 +209,10 @@ def main():
         pred_boxes, target_boxes = get_bboxes(
             train_loader, model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
         )
+
+        ### TO DO: ADD FUNCTION TO CALCULATE THE PRECISION OF OBJECTDETECTION / -RECOGNITION 
+        ### IN CONNECTION TO THE OBJECT AND IMAGE SIZE 
+
         mean_avg_prec = mean_average_precision(
             pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
         )
