@@ -424,3 +424,8 @@ def parse_cfg(cfg_path):
     cfg = yaml.load(f, Loader=yaml.FullLoader)
     print('Config:', cfg)
     return cfg
+
+
+#def how_on_small_objects(pred_boxes, true_boxes):
+    # ratios = [...]
+
