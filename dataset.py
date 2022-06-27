@@ -91,6 +91,7 @@ class VOCDataset(torch.utils.data.Dataset):
 
         return image, label_matrix
 
+
 class Other_Dataset(torch.utils.data.Dataset):
     def __init__(
         self, csv_file, img_dir, label_dir, S=7, B=2, C=1, transform=None, # These hyperparameters might be useful to change
@@ -167,7 +168,7 @@ class Other_Dataset(torch.utils.data.Dataset):
                 )
 
                 label_matrix[i, j, (self.C+1):(self.C+5)] = box_coordinates
-
+            
                 # Set one hot encoding for class_label
                 label_matrix[i, j, class_label] = 1
 

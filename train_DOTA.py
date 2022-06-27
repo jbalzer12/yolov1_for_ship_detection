@@ -11,7 +11,8 @@ import torch.optim as optim
 import torchvision.transforms.functional as FT
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from model_modified import Yolov1 # changed
+#from model_modified import Yolov1 # changed
+from model import Yolov1
 from dataset import (
     Other_Dataset,
 )
@@ -51,7 +52,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = args.batch_size # 64 in original paper but I don't have that much vram, grad accum?
 WEIGHT_DECAY = 0.0005
 EPOCHS = args.epochs
-NUM_WORKERS = 15
+NUM_WORKERS = 4
 PIN_MEMORY = True
 if args.load_model == 'True':
     LOAD_MODEL = True # DEFAULT MODUS: training
@@ -154,6 +155,9 @@ def main():
         shuffle=True,
         drop_last=True,
     )
+
+    torch.save(train_loader, 'train_loader_DOTA.pth')
+    exit()
 
     test_loader = DataLoader(
         dataset=test_dataset,

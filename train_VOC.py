@@ -11,7 +11,7 @@ import torchvision.transforms.functional as FT
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from model import Yolov1
-from dataset import VOCDataset
+from dataset import (VOCDataset, Other_Dataset) 
 from utils import (
     non_max_suppression,
     mean_average_precision,
@@ -37,7 +37,7 @@ parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_VOC_new_try.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_VOCDataset_train.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -56,8 +56,8 @@ elif args.load_model == 'False':
 LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
-    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_VOC_1000_dropout_changed.txt', 'w') # HDF5 anstelle von .txt?
-    #OUTPUT = open('output_VOC_new.txt', 'w') # HDF5 anstelle von .txt?
+    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_VOC_135_train.txt', 'w') # HDF5 anstelle von .txt?
+    #OUTPUT = open('output_VOC_VOCDataset_test.txt', 'w') # HDF5 anstelle von .txt?
     OUTPUT.write('Train_mAP Mean_loss\n')
 
 class Compose(object):
@@ -118,24 +118,29 @@ def main():
 
     # In case a model gets loaded the checkpoint gets loaded
     if LOAD_MODEL:
-        a = torch.load(LOAD_MODEL_FILE, map_location=torch.device('cpu'))
+        a = torch.load(LOAD_MODEL_FILE, map_location=DEVICE) # torch.device('cpu'))
         load_checkpoint(a, model, optimizer)
 
-    train_dataset = VOCDataset(
-        #"data/VOC2007_2012/100examples.csv",
+    train_dataset = VOCDataset( #Other_Dataset( # VOCDataset(
         "/scratch/tmp/jbalzer/data/VOC2007_2012/train.csv",
         #"data/VOC2007_2012/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
+        S=S,
+        B=B,
+        C=num_classes,
     ) 
 
-    test_dataset = VOCDataset(
+    test_dataset = VOCDataset( #Other_Dataset( # VOCDataset(
         "/scratch/tmp/jbalzer/data/VOC2007_2012/test.csv", 
         #"data/VOC2007_2012/test.csv", 
         transform=transform, 
         img_dir=IMG_DIR, 
         label_dir=LABEL_DIR,
+        S=S,
+        B=B,
+        C=num_classes,
     )
 
     train_loader = DataLoader(
@@ -152,10 +157,10 @@ def main():
         batch_size=BATCH_SIZE,  
         num_workers=NUM_WORKERS,
         pin_memory=PIN_MEMORY,
-        shuffle=True,
+        shuffle=True, 
         drop_last=True,
     )
-
+    
     for epoch in range(EPOCHS):
 
         # Only required if a model gets trained
@@ -202,27 +207,17 @@ def main():
                 sys.exit()
 
         pred_boxes, target_boxes = get_bboxes(
-            test_loader, model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=20,
+            train_loader, model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
         )
-        #torch.save(pred_boxes, 'data/DOTA-v2.0/pred_boxes.pt')
-        #torch.save(target_boxes, 'data/DOTA-v2.0/target_boxes.pt')
         mean_avg_prec = mean_average_precision(
             pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
         )
 
-        #OUTPUT.write(f"Train mAP: {mean_avg_prec}\n")
         OUTPUT.write(f'{mean_avg_prec}')
         print(f"Train mAP: {mean_avg_prec}")
 
         # The training function gets called
         train_fn(train_loader, model, optimizer, loss_fn)
-
-        if epoch == (100, 200, 300, 400, 500, 750):
-            checkpoint = {
-                "state_dict": model.state_dict(),
-                "optimizer": optimizer.state_dict(),
-            }
-            save_checkpoint(checkpoint, filename=f'{LOAD_MODEL_FILE}_{epoch}_epochs')
 
     OUTPUT.close()
     
