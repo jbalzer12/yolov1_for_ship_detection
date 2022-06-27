@@ -209,6 +209,7 @@ def main():
         )
 
         OUTPUT_train.write(f'{mean_avg_prec}')
+        OUTPUT_train.close()
         print(f"Train mAP: {mean_avg_prec}")
         ###############################################
 
@@ -220,6 +221,7 @@ def main():
             pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
         )
         OUTPUT_test.write(f'{mean_avg_prec}')
+        OUTPUT_test.close()
         print(f"Test mAP: {mean_avg_prec}")
         ###############################################
         
