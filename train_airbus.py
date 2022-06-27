@@ -12,6 +12,7 @@ import torchvision.transforms.functional as FT
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from model_modified import Yolov1
+#from model import Yolov1
 from dataset import (
     Other_Dataset,
 )
@@ -60,8 +61,12 @@ LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
     #OUTPUT = open('output_airbus_135.txt', 'w') # HDF5 anstelle von .txt?
-    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14.txt', 'w') # HDF5 anstelle von .txt?
-    OUTPUT.write('Train_mAP Mean_loss\n')
+    OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
+    OUTPUT_train.write('Train_mAP Mean_loss\n')
+    OUTPUT_train.close()
+    OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
+    OUTPUT_test.write('Train_mAP Mean_loss\n')
+    OUTPUT_test.close()
 
 
 class Compose(object):
@@ -75,7 +80,7 @@ class Compose(object):
         return img, bboxes
 
 
-transform = Compose([transforms.Resize((896, 896)), transforms.ToTensor()]) # changed 448 to 1792 (448 * 4)
+transform = Compose([transforms.Resize((896, 896)), transforms.ToTensor()]) # changed 448 to 896 (448 * 2)
 
 # Training function
 def train_fn(train_loader, model, optimizer, loss_fn):
@@ -96,7 +101,12 @@ def train_fn(train_loader, model, optimizer, loss_fn):
         loop.set_postfix(loss=loss.item())
 
     #OUTPUT.write(f"Mean loss was: {sum(mean_loss)/len(mean_loss)}\n")
-    OUTPUT.write(f' {sum(mean_loss)/len(mean_loss)}\n')
+    OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
+    OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
+    OUTPUT_train.write(f' {sum(mean_loss)/len(mean_loss)}\n')
+    OUTPUT_train.close()
+    OUTPUT_test.write(f' {sum(mean_loss)/len(mean_loss)}\n')
+    OUTPUT_test.close()
     print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
 
 
@@ -119,13 +129,13 @@ def main():
 
     # In case a model gets loaded the checkpoint gets loaded
     if LOAD_MODEL:
-        a = torch.load(LOAD_MODEL_FILE, map_location=torch.device('cpu'))
+        a = torch.load(LOAD_MODEL_FILE, map_location=DEVICE) # torch.device('cpu'))
         load_checkpoint(a, model, optimizer)
 
 
     train_dataset = Other_Dataset(
-        #"/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
-        "data/airbus-ship-detection/train.csv",
+        "/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
+        #"data/airbus-ship-detection/train.csv",
         #"data/DOTA-v2.0/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
@@ -136,8 +146,8 @@ def main():
     )
 
     test_dataset = Other_Dataset(
-        #"/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
-        "data/airbus-ship-detection/val-smaller.csv",
+        "/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
+        #"data/airbus-ship-detection/val-smaller.csv",
         #"data/DOTA-v2.0/val.csv",
         transform=transform, 
         img_dir=IMG_DIR, 
@@ -171,6 +181,10 @@ def main():
         if not(LOAD_MODEL): 
             now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
             print("epoch:", epoch, f"/ {args.epochs} =>", epoch / args.epochs * 100, "%, date/time:", now)    
+            OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
+            OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
+
+
 
         # In case a model gets loaded, images will be used by the model
         if LOAD_MODEL:
@@ -186,22 +200,44 @@ def main():
                 import sys
                 sys.exit()
 
+        ###### VALIDATION BASED ON TRAINING DATA ######
         pred_boxes, target_boxes = get_bboxes(
-            loader=test_loader, model=model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
+            loader=train_loader, model=model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
         )
-
         mean_avg_prec = mean_average_precision(
             pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
         )
 
-        #OUTPUT.write(f"Train mAP: {mean_avg_prec}\n")
-        OUTPUT.write(f'{mean_avg_prec}')
+        OUTPUT_train.write(f'{mean_avg_prec}')
         print(f"Train mAP: {mean_avg_prec}")
+        ###############################################
 
+        ###### VALIDATION BASED ON TEST DATA ######
+        pred_boxes, target_boxes = get_bboxes(
+            loader=test_loader, model=model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
+        )
+        mean_avg_prec = mean_average_precision(
+            pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
+        )
+        OUTPUT_test.write(f'{mean_avg_prec}')
+        print(f"Test mAP: {mean_avg_prec}")
+        ###############################################
+        
         # The training function gets called
         train_fn(train_loader, model, optimizer, loss_fn)
+        
+        ###### SAVES CHECKPOINT INBETWEEN ######
+        checkpoint = {
+        "state_dict": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        }
+        save_checkpoint(checkpoint, filename=LOAD_MODEL_FILE)
+        ###############################################
 
-    OUTPUT.close()
+        
+
+    OUTPUT_train.close()
+    OUTPUT_test.close()
     
     # the following lines were added to make sure the procession stops after the full range of epochs and not 
     # at the point of a specific mean average precision 
