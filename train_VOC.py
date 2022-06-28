@@ -37,7 +37,7 @@ parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_VOCDataset_validated_on_train.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_VOCDataset_validated_on_test_dropout_changed.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -56,7 +56,7 @@ elif args.load_model == 'False':
 LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
-    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_VOC_135_validated_on_train.txt', 'w') # HDF5 anstelle von .txt?
+    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_VOC_135_validated_on_test_dropout_changed.txt', 'w') # HDF5 anstelle von .txt?
     #OUTPUT = open('output_VOC_VOCDataset_test.txt', 'w') # HDF5 anstelle von .txt?
     OUTPUT.write('Train_mAP Test_mAP Mean_loss\n')
 
@@ -71,7 +71,8 @@ class Compose(object):
         return img, bboxes
 
 
-transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor()])
+#transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor()])
+train_transforms, test_transforms = 
 
 # Training function
 def train_fn(train_loader, model, optimizer, loss_fn):
@@ -133,7 +134,7 @@ def main():
     ) 
 
     test_dataset = VOCDataset(
-        "/scratch/tmp/jbalzer/data/VOC2007_2012/train.csv", 
+        "/scratch/tmp/jbalzer/data/VOC2007_2012/test.csv", 
         #"data/VOC2007_2012/test.csv", 
         transform=transform, 
         img_dir=IMG_DIR, 
