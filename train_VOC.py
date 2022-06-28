@@ -28,6 +28,8 @@ import augmentation
 
 from datetime import datetime as dt
 
+RUN_LOCAL = False
+
 seed = 123
 torch.manual_seed(seed)
 
@@ -123,9 +125,16 @@ def main():
         a = torch.load(LOAD_MODEL_FILE, map_location=DEVICE) # torch.device('cpu'))
         load_checkpoint(a, model, optimizer)
 
+    if RUN_LOCAL == False:
+        train_csv = "/scratch/tmp/jbalzer/data/VOC2007_2012/train.csv"
+        test_csv = "/scratch/tmp/jbalzer/data/VOC2007_2012/test.csv"
+    elif RUN_LOCAL == True:
+        train_csv = "data/VOC2007_2012/train.csv"
+        test_csv = "data/VOC2007_2012/test.csv"
+
+
     train_dataset = VOCDataset( 
-        "/scratch/tmp/jbalzer/data/VOC2007_2012/train.csv",
-        #"data/VOC2007_2012/train.csv",
+        train_csv,
         #transform=transform,
         transform=train_transforms,
         img_dir=IMG_DIR,
@@ -136,8 +145,7 @@ def main():
     ) 
 
     test_dataset = VOCDataset(
-        "/scratch/tmp/jbalzer/data/VOC2007_2012/test.csv", 
-        #"data/VOC2007_2012/test.csv", 
+        test_csv, 
         #transform=transform, 
         transform=test_transforms,
         img_dir=IMG_DIR, 
