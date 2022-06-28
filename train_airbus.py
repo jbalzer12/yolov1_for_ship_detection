@@ -61,10 +61,12 @@ LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
     #OUTPUT = open('output_airbus_135.txt', 'w') # HDF5 anstelle von .txt?
-    OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
+    #OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
+    OUTPUT_train = open('output_airbus_135_train.txt', 'a')
     OUTPUT_train.write('Train_mAP Mean_loss\n')
     OUTPUT_train.close()
-    OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
+    #OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
+    OUTPUT_test = open('output_airbus_135_test.txt', 'a') # HDF5 anstelle von .txt?
     OUTPUT_test.write('Train_mAP Mean_loss\n')
     OUTPUT_test.close()
 
@@ -101,8 +103,10 @@ def train_fn(train_loader, model, optimizer, loss_fn):
         loop.set_postfix(loss=loss.item())
 
     #OUTPUT.write(f"Mean loss was: {sum(mean_loss)/len(mean_loss)}\n")
-    OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
-    OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
+    #OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
+    OUTPUT_train = open('output_airbus_135_train.txt', 'a')
+    OUTPUT_test = open('output_airbus_135_test.txt', 'a') # HDF5 anstelle von .txt?
+    #OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
     OUTPUT_train.write(f' {sum(mean_loss)/len(mean_loss)}\n')
     OUTPUT_train.close()
     OUTPUT_test.write(f' {sum(mean_loss)/len(mean_loss)}\n')
@@ -134,8 +138,8 @@ def main():
 
 
     train_dataset = Other_Dataset(
-        "/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
-        #"data/airbus-ship-detection/train.csv",
+        #"/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
+        "data/airbus-ship-detection/train.csv",
         #"data/DOTA-v2.0/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
@@ -146,8 +150,8 @@ def main():
     )
 
     test_dataset = Other_Dataset(
-        "/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
-        #"data/airbus-ship-detection/val-smaller.csv",
+        #"/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
+        "data/airbus-ship-detection/val-smaller.csv",
         #"data/DOTA-v2.0/val.csv",
         transform=transform, 
         img_dir=IMG_DIR, 
@@ -181,10 +185,10 @@ def main():
         if not(LOAD_MODEL): 
             now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
             print("epoch:", epoch, f"/ {args.epochs} =>", epoch / args.epochs * 100, "%, date/time:", now)    
-            OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
-            OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
-
-
+            #OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
+            #OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
+            OUTPUT_train = open('output_airbus_135_train.txt', 'a')
+            OUTPUT_test = open('output_airbus_135_test.txt', 'a') # HDF5 anstelle von .txt?
 
         # In case a model gets loaded, images will be used by the model
         if LOAD_MODEL:
