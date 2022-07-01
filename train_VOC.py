@@ -11,7 +11,7 @@ import torchvision.transforms.functional as FT
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from model import Yolov1
-from dataset import (VOCDataset, Other_Dataset) 
+from dataset_augmented import (VOCDataset, Other_Dataset) ##### changed
 from utils import (
     non_max_suppression,
     mean_average_precision,
@@ -28,7 +28,7 @@ import augmentation
 
 from datetime import datetime as dt
 
-RUN_LOCAL = False
+RUN_LOCAL = True
 
 seed = 123
 torch.manual_seed(seed)
@@ -50,7 +50,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = args.batch_size # 64 in original paper but I don't have that much vram, grad accum?
 WEIGHT_DECAY = 0.0005
 EPOCHS = args.epochs
-NUM_WORKERS = 15
+NUM_WORKERS = 2
 PIN_MEMORY = True
 if args.load_model == 'True':
     LOAD_MODEL = True # DEFAULT MODUS: training
@@ -58,9 +58,11 @@ elif args.load_model == 'False':
     LOAD_MODEL = False
 LOAD_MODEL_FILE = args.model_path
 
-if not(LOAD_MODEL): 
-    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_VOC_135_validated_on_test_dropout_0_5_augmentation_added.txt', 'w') # HDF5 anstelle von .txt?
-    #OUTPUT = open('output_VOC_VOCDataset_test.txt', 'w') # HDF5 anstelle von .txt?
+if not LOAD_MODEL: 
+    if RUN_LOCAL:
+        OUTPUT = open('output_VOC_VOCDataset_test.txt', 'w')
+    elif not RUN_LOCAL:
+        OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_VOC_135_validated_on_test_dropout_0_5_augmentation_added.txt', 'w') # HDF5 anstelle von .txt?
     OUTPUT.write('Train_mAP Test_mAP Mean_loss\n')
 
 class Compose(object):
@@ -123,7 +125,7 @@ def main():
     # In case a model gets loaded the checkpoint gets loaded
     if LOAD_MODEL:
         a = torch.load(LOAD_MODEL_FILE, map_location=DEVICE) # torch.device('cpu'))
-        load_checkpoint(a, model, optimizer)
+        load_checkpoint(a, model, optimizer, LEARNING_RATE)
 
     if RUN_LOCAL == False:
         train_csv = "/scratch/tmp/jbalzer/data/VOC2007_2012/train.csv"
@@ -154,6 +156,8 @@ def main():
         B=B,
         C=num_classes,
     )
+    #torch.save(test_dataset, 'test_dataset2.pt')
+    #exit()
 
     train_loader = DataLoader(
         dataset=train_dataset,
@@ -223,6 +227,9 @@ def main():
             train_loader, model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
         )
 
+        torch.save(pred_boxes, 'pred_boxes.pt')
+        torch.save(target_boxes, 'target_boxes.pt')
+        print('---------------------------------------------------------------')
         train_mean_avg_prec = mean_average_precision(
             pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
         )

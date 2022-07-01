@@ -395,7 +395,7 @@ def save_checkpoint(state, filename="my_checkpoint.pth.tar"):
     print("checkpoint saved to: " + os.getcwd() + filename)
 
 
-def load_checkpoint(checkpoint, model, optimizer):
+def load_checkpoint(checkpoint, model, optimizer, learning_rate):
     print("=> Loading checkpoint")
 
     model.load_state_dict(checkpoint["state_dict"])
@@ -404,7 +404,7 @@ def load_checkpoint(checkpoint, model, optimizer):
     # If we don't do this then it will just have learning rate of old checkpoint
     # and it will lead to many hours of debugging \:
     for param_group in optimizer.param_groups:
-        param_group["lr"] = lr
+        param_group["lr"] = learning_rate
 
 
 def parse_cfg(cfg_path):
@@ -426,6 +426,6 @@ def parse_cfg(cfg_path):
     return cfg
 
 
-#def how_on_small_objects(pred_boxes, true_boxes):
-    # ratios = [...]
+def how_on_small_objects(pred_boxes, true_boxes):
+    ratios = [...]
 
