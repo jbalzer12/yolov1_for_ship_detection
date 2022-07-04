@@ -41,7 +41,7 @@ parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_airbus_135_896_resolution_B_14.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_airbus_500_896_resolution_B_14.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -61,15 +61,10 @@ LOAD_MODEL_FILE = args.model_path
 
 if not(LOAD_MODEL): 
     #OUTPUT = open('output_airbus_135.txt', 'w') # HDF5 anstelle von .txt?
-    #OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
-    OUTPUT_train = open('output_airbus_135_train.txt', 'a')
-    OUTPUT_train.write('Train_mAP Mean_loss\n')
-    OUTPUT_train.close()
-    #OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
-    OUTPUT_test = open('output_airbus_135_test.txt', 'a') # HDF5 anstelle von .txt?
-    OUTPUT_test.write('Train_mAP Mean_loss\n')
-    OUTPUT_test.close()
-
+    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_airbus_500_896_resolution_B_14.txt', 'a') # HDF5 anstelle von .txt?
+    #OUTPUT = open('output_airbus_135_train.txt', 'a')
+    OUTPUT.write('Train_mAP Test_mAP Mean_loss\n')
+    OUTPUT.close()
 
 class Compose(object):
     def __init__(self, transforms):
@@ -102,15 +97,8 @@ def train_fn(train_loader, model, optimizer, loss_fn):
         # Update progress bar
         loop.set_postfix(loss=loss.item())
 
-    #OUTPUT.write(f"Mean loss was: {sum(mean_loss)/len(mean_loss)}\n")
-    #OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
-    OUTPUT_train = open('output_airbus_135_train.txt', 'a')
-    OUTPUT_test = open('output_airbus_135_test.txt', 'a') # HDF5 anstelle von .txt?
-    #OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
-    OUTPUT_train.write(f' {sum(mean_loss)/len(mean_loss)}\n')
-    OUTPUT_train.close()
-    OUTPUT_test.write(f' {sum(mean_loss)/len(mean_loss)}\n')
-    OUTPUT_test.close()
+    OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_airbus_500_896_resolution_B_14.txt', 'a')
+    OUTPUT.write(f" {sum(mean_loss)/len(mean_loss)}\n")
     print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
 
 
@@ -138,8 +126,8 @@ def main():
 
 
     train_dataset = Other_Dataset(
-        #"/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
-        "data/airbus-ship-detection/train.csv",
+        "/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv",
+        #"data/airbus-ship-detection/train.csv",
         #"data/DOTA-v2.0/train.csv",
         transform=transform,
         img_dir=IMG_DIR,
@@ -150,8 +138,8 @@ def main():
     )
 
     test_dataset = Other_Dataset(
-        #"/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
-        "data/airbus-ship-detection/val-smaller.csv",
+        "/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv", 
+        #"data/airbus-ship-detection/val-smaller.csv",
         #"data/DOTA-v2.0/val.csv",
         transform=transform, 
         img_dir=IMG_DIR, 
@@ -185,10 +173,7 @@ def main():
         if not(LOAD_MODEL): 
             now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
             print("epoch:", epoch, f"/ {args.epochs} =>", epoch / args.epochs * 100, "%, date/time:", now)    
-            #OUTPUT_train = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_train.txt', 'a') # HDF5 anstelle von .txt?
-            #OUTPUT_test = open('/scratch/tmp/jbalzer/yolov1/output_airbus_135_896_resolution_B_14_test.txt', 'a') # HDF5 anstelle von .txt?
-            OUTPUT_train = open('output_airbus_135_train.txt', 'a')
-            OUTPUT_test = open('output_airbus_135_test.txt', 'a') # HDF5 anstelle von .txt?
+            OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_airbus_500_896_resolution_B_14.txt', 'a') # HDF5 anstelle von .txt?
 
         # In case a model gets loaded, images will be used by the model
         if LOAD_MODEL:
@@ -208,25 +193,23 @@ def main():
         pred_boxes, target_boxes = get_bboxes(
             loader=train_loader, model=model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
         )
-        mean_avg_prec = mean_average_precision(
+        train_mean_avg_prec = mean_average_precision(
             pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
         )
 
-        OUTPUT_train.write(f'{mean_avg_prec}')
-        OUTPUT_train.close()
-        print(f"Train mAP: {mean_avg_prec}")
+        print(f"Train mAP: {train_mean_avg_prec}")
         ###############################################
 
         ###### VALIDATION BASED ON TEST DATA ######
         pred_boxes, target_boxes = get_bboxes(
             loader=test_loader, model=model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
         )
-        mean_avg_prec = mean_average_precision(
+        test_mean_avg_prec = mean_average_precision(
             pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
         )
-        OUTPUT_test.write(f'{mean_avg_prec}')
-        OUTPUT_test.close()
-        print(f"Test mAP: {mean_avg_prec}")
+        OUTPUT.write(f'{train_mean_avg_prec} {test_mean_avg_prec}')
+        OUTPUT.close()
+        print(f"Test mAP: {test_mean_avg_prec}")
         ###############################################
         
         # The training function gets called
@@ -240,10 +223,7 @@ def main():
         save_checkpoint(checkpoint, filename=LOAD_MODEL_FILE)
         ###############################################
 
-        
-
-    OUTPUT_train.close()
-    OUTPUT_test.close()
+    OUTPUT.close()
     
     # the following lines were added to make sure the procession stops after the full range of epochs and not 
     # at the point of a specific mean average precision 
@@ -254,7 +234,6 @@ def main():
     save_checkpoint(checkpoint, filename=LOAD_MODEL_FILE)
     import sys
     sys.exit()
-    exit()
 
 
 if __name__ == "__main__":

@@ -11,7 +11,8 @@ import torchvision.transforms.functional as FT
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from model import Yolov1
-from dataset_augmented import (VOCDataset, Other_Dataset) ##### changed
+from dataset import VOCDataset
+#from dataset_augmented import (VOCDataset, Other_Dataset) ##### changed
 from utils import (
     non_max_suppression,
     mean_average_precision,
@@ -22,13 +23,14 @@ from utils import (
     save_checkpoint,
     load_checkpoint,
     parse_cfg,
+    mAP_on_object_size
 )
 from loss import YoloLoss
 import augmentation
 
 from datetime import datetime as dt
 
-RUN_LOCAL = True
+RUN_LOCAL = False
 
 seed = 123
 torch.manual_seed(seed)
@@ -40,7 +42,7 @@ parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_VOCDataset_validated_on_test_dropout_0_5_augmentation_added.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_VOC_500_validated_dropout_0_5_augmentation_added_small_obj_evaluation.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -50,7 +52,10 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = args.batch_size # 64 in original paper but I don't have that much vram, grad accum?
 WEIGHT_DECAY = 0.0005
 EPOCHS = args.epochs
-NUM_WORKERS = 2
+if not RUN_LOCAL:
+    NUM_WORKERS = 63
+elif RUN_LOCAL:
+    NUM_WORKERS = 2
 PIN_MEMORY = True
 if args.load_model == 'True':
     LOAD_MODEL = True # DEFAULT MODUS: training
@@ -62,8 +67,8 @@ if not LOAD_MODEL:
     if RUN_LOCAL:
         OUTPUT = open('output_VOC_VOCDataset_test.txt', 'w')
     elif not RUN_LOCAL:
-        OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_VOC_135_validated_on_test_dropout_0_5_augmentation_added.txt', 'w') # HDF5 anstelle von .txt?
-    OUTPUT.write('Train_mAP Test_mAP Mean_loss\n')
+        OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_VOC_500_validated_on_test_dropout_0_5_augmentation_added_small_obj_evaluation.txt', 'w') # HDF5 anstelle von .txt?
+    OUTPUT.write('Train_mAP_on_0.58 Test_mAP_on_0.58 Train_mAP_on_1.0 Test_mAP_on_1.0 Train_mAP_on_5.0 Test_mAP_on_5.0 Train_mAP_on_10.0 Test_mAP_on_10.0 Train_mAP_on_20.0 Test_mAP_on_20.0 Train_mAP_on_30.0 Test_mAP_on_30.0 Train_mAP_on_40.0 Test_mAP_on_40.0 Train_mAP_on_50.0 Test_mAP_on_50.0 Train_mAP_on_70.0 Test_mAP_on_70.0 Train_mAP_on_100.0 Test_mAP_on_100.0 Mean_loss\n')
 
 class Compose(object):
     def __init__(self, transforms):
@@ -76,8 +81,8 @@ class Compose(object):
         return img, bboxes
 
 
-#transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor()])
-train_transforms, test_transforms = augmentation.initialize_transformation(448)
+transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor()])
+#train_transforms, test_transforms = augmentation.initialize_transformation(448)
 
 # Training function
 def train_fn(train_loader, model, optimizer, loss_fn):
@@ -99,7 +104,7 @@ def train_fn(train_loader, model, optimizer, loss_fn):
         loop.set_postfix(loss=loss.item())
 
     #OUTPUT.write(f"Mean loss was: {sum(mean_loss)/len(mean_loss)}\n")
-    OUTPUT.write(f' {sum(mean_loss)/len(mean_loss)}\n')
+    OUTPUT.write(f'{sum(mean_loss)/len(mean_loss)}\n')
     print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
 
 
@@ -137,8 +142,8 @@ def main():
 
     train_dataset = VOCDataset( 
         train_csv,
-        #transform=transform,
-        transform=train_transforms,
+        transform=transform,
+        #transform=train_transforms,
         img_dir=IMG_DIR,
         label_dir=LABEL_DIR,
         S=S,
@@ -148,16 +153,14 @@ def main():
 
     test_dataset = VOCDataset(
         test_csv, 
-        #transform=transform, 
-        transform=test_transforms,
+        transform=transform, 
+        #transform=test_transforms,
         img_dir=IMG_DIR, 
         label_dir=LABEL_DIR,
         S=S,
         B=B,
         C=num_classes,
     )
-    #torch.save(test_dataset, 'test_dataset2.pt')
-    #exit()
 
     train_loader = DataLoader(
         dataset=train_dataset,
@@ -176,6 +179,7 @@ def main():
         shuffle=True, 
         drop_last=True,
     )
+
     
     for epoch in range(EPOCHS):
 
@@ -226,30 +230,34 @@ def main():
         pred_boxes, target_boxes = get_bboxes(
             train_loader, model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
         )
-
-        torch.save(pred_boxes, 'pred_boxes.pt')
-        torch.save(target_boxes, 'target_boxes.pt')
-        print('---------------------------------------------------------------')
-        train_mean_avg_prec = mean_average_precision(
-            pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
-        )
+        #train_mean_avg_prec = mean_average_precision(
+        #    pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
+        #) 
+        train_map_on_small = mAP_on_object_size(
+            pred_boxes, target_boxes, iou_threshold=0.5, num_classes=num_classes, ratios=[0.0058, 0.01, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.70, 1.0]
+        )     
         ###########################################
 
         ###### Calculate mAP based on test data
         pred_boxes, target_boxes = get_bboxes(
             test_loader, model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
         )
-
-        test_mean_avg_prec = mean_average_precision(
-            pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
+        #test_mean_avg_prec = mean_average_precision(
+        #    pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
+        #)
+        test_map_on_small = mAP_on_object_size(
+            pred_boxes, target_boxes, iou_threshold=0.5, num_classes=num_classes, ratios=[0.0058, 0.01, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.70, 1.0]
         )
+
         ###########################################
 
         ### TO DO: ADD FUNCTION TO CALCULATE THE PRECISION OF OBJECTDETECTION / -RECOGNITION 
         ### IN CONNECTION TO THE OBJECT AND IMAGE SIZE 
-
-        OUTPUT.write(f'{train_mean_avg_prec} {test_mean_avg_prec}')
-        print(f"Train mAP: {train_mean_avg_prec}, Test mAP: {test_mean_avg_prec}")
+        ratios=[0.0058, 0.01, 0.05, 0.10, 0.20, 0.30, 0.40, 0.50, 0.70, 1.0]
+        for ratio in ratios:
+            OUTPUT.write(f'{float(train_map_on_small[str(ratio)])} {float(test_map_on_small[str(ratio)])} ')
+        # OUTPUT.write(f'{train_mean_avg_prec} {test_mean_avg_prec} ')
+        print(f"Train mAP on small obj.: {train_map_on_small}, Test mAP on small obj.: {test_map_on_small}")
 
         # The training function gets called
         train_fn(train_loader, model, optimizer, loss_fn)
