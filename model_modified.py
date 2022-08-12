@@ -13,6 +13,8 @@ Tuple is structured by (kernel_size, filters, stride, padding)
 List is structured by tuples and lastly int with number of repeats
 """
 
+'''
+# Architecture for 448 S=20:
 architecture_config = [
     (7, 64, 2, 3),
     "M",
@@ -20,20 +22,40 @@ architecture_config = [
     "M",
     (1, 128, 1, 0),
     (3, 256, 1, 1),
-    (1, 256, 1, 0),
+    (1, 256, 1, 0), # (1, 256, 1, 0),
     (3, 512, 1, 1),
     "M",
-    [(1, 256, 1, 0), (3, 512, 1, 1), 4],
-    (1, 512, 1, 0),
+    [(1, 256, 1, 1), (3, 512, 1, 1), 4], # [(1, 256, 1, 0), (3, 512, 1, 1), 4],
+    (1, 512, 1, 0), # original: (1, 512, 1, 0),
     (3, 1024, 1, 1),
-    "M",
-    [(1, 512, 1, 0), (3, 1024, 1, 1), 2],
-    (3, 1024, 1, 1),
-    (3, 1024, 2, 1),
-    (3, 1024, 1, 1),
-    (3, 1024, 1, 1),
+    "M", # remove it to keep the matrix bigger to try S=28
+    [(1, 512, 1, 1), (3, 1024, 1, 1), 2], # original: [(1, 512, 1, 0), (3, 1024, 1, 1), 2],
+    (3, 1024, 1, 1), # originally: (3, 1024, 1, 1)
+    (3, 1024, 1, 0), # originally: (3, 1024, 2, 1)
+    (3, 1024, 1, 1), # originally: (3, 1024, 1, 1)
+    (3, 1024, 1, 1), # originally: (3, 1024, 1, 1)
 ]
-
+'''
+architecture_config = [
+    (7, 64, 2, 3),
+    "M",
+    (3, 192, 1, 1),
+    "M",
+    (1, 128, 1, 0),
+    (3, 256, 1, 1),
+    (1, 256, 1, 0), # (1, 256, 1, 0),
+    (3, 512, 1, 1),
+    "M",
+    [(1, 256, 1, 0), (3, 512, 1, 1), 4], # [(1, 256, 1, 0), (3, 512, 1, 1), 4],
+    (1, 512, 1, 0), # original: (1, 512, 1, 0),
+    (3, 1024, 1, 1),
+    "M", # remove it to keep the matrix bigger to try S=28
+    [(1, 512, 1, 0), (3, 1024, 1, 1), 2], # original: [(1, 512, 1, 0), (3, 1024, 1, 1), 2],
+    (3, 1024, 1, 1), # originally: (3, 1024, 1, 1)
+    (3, 1024, 1, 1), # originally: (3, 1024, 2, 1)
+    (3, 1024, 1, 1), # originally: (3, 1024, 1, 1)
+    (3, 1024, 1, 1), # originally: (3, 1024, 1, 1)
+]
 
 class CNNBlock(nn.Module):
     def __init__(self, in_channels, out_channels, **kwargs):
@@ -41,6 +63,8 @@ class CNNBlock(nn.Module):
         self.conv = nn.Conv2d(in_channels, out_channels, bias=False, **kwargs)
         self.batchnorm = nn.BatchNorm2d(out_channels)
         self.leakyrelu = nn.LeakyReLU(0.1)
+
+        # Skip connections einbauen 
 
     def forward(self, x):
         return self.leakyrelu(self.batchnorm(self.conv(x)))

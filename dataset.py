@@ -117,7 +117,6 @@ class Other_Dataset(torch.utils.data.Dataset):
                     float(x) if float(x) != int(float(x)) else int(float(x))
                     for x in label.replace("\n", "").split()
                 ]
-
                 boxes.append([class_label, x, y, width, height])
 
         img_path = os.path.join(self.img_dir, self.annotations.iloc[index, 0])

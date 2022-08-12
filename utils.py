@@ -204,8 +204,11 @@ def mean_average_precision(
         recalls_array.append(recalls)
         # torch.trapz for numerical integration
         average_precisions.append(torch.trapz(precisions, recalls))
-        
-    mean_average_precision = sum(average_precisions) / len(average_precisions)
+
+    if (sum(average_precisions) != 0) and (len(average_precisions) != 0):    
+        mean_average_precision = sum(average_precisions) / len(average_precisions)
+    else:
+        mean_average_precision = 0
     return mean_average_precision  # RECALL AND PRECISION SHOULD BE ADDED TO THE OUTPUT.dat
 
 
@@ -225,7 +228,7 @@ def plot_image(image, boxes, class_names):
     # Create a Rectangle patch.
     # Each box contains a class label as well as (x,y) from the center 
     # point and width and height of a bounding box.
-    for box in boxes:
+    for box in boxes:      
         label = class_names[int(box[0])]
         # From this point on, the class label is no longer part of the list 'box'
         box = box[2:]
@@ -436,16 +439,24 @@ def mAP_on_object_size(pred_boxes, true_boxes, iou_threshold=0.5, box_format="mi
     Returns:
         float: mAP value across all classes given a specific IoU threshold 
     """
+    '''mean_average_precisions = {}
+    for ratio in ratios:
+        mean_average_precisions[str(ratio)] = (0,0) # (mAP, amount of objects)
+    # list storing all AP for respective classes
+    average_precisions = []'''
+
     mean_average_precisions = {}
     for ratio in ratios:
-        mean_average_precisions[str(ratio)] = 0
-    # list storing all AP for respective classes
-    average_precisions = []
+        mean_average_precisions[str(ratio)] = (0,0) # (mAP, amount of objects
 
     # used for numerical stability later on
     epsilon = 1e-6
     
     for ratio_idx in range(len(ratios)):
+
+       
+        # list storing all AP for respective classes
+        average_precisions = []
 
         # In the following lines the true boxes get filtered by the current ratio.
         # To get interval from the current ratio (x) to the ratio before (x-1)
@@ -455,6 +466,7 @@ def mAP_on_object_size(pred_boxes, true_boxes, iou_threshold=0.5, box_format="mi
         else:
             lower_interval_border = ratios[ratio_idx-1]
 
+        amount_objects = 0
         for c in range(num_classes):
         
             detections = []
@@ -465,8 +477,20 @@ def mAP_on_object_size(pred_boxes, true_boxes, iou_threshold=0.5, box_format="mi
             # current class c
             # Pred boxes: [[train_idx, class_pred, prob_score, x1, y1, x2, y2], ...]
             for detection in pred_boxes:
+                '''
                 if detection[1] == c:
                     detections.append(detection)
+                '''
+                
+                # Filter all the detections with a size <= the <ratio>
+                box_size = detection[5] * detection[6]
+                if lower_interval_border == 0:
+                    if (detection[1] == c) and (lower_interval_border <= box_size) and (box_size <= ratios[ratio_idx]):
+                        detections.append(detection)
+                else: 
+                    if (detection[1] == c) and (lower_interval_border < box_size) and (box_size <= ratios[ratio_idx]):
+                        detections.append(detection)
+                
 
             for true_box in true_boxes:
                 # Filter all the true boxes with a size <= the <ratio>
@@ -497,8 +521,11 @@ def mAP_on_object_size(pred_boxes, true_boxes, iou_threshold=0.5, box_format="mi
             TP = torch.zeros((len(detections))) # MAY NEEDS TO BE CHAGED TO TRUE BOXES
             FP = torch.zeros((len(detections)))
             
-            total_true_bboxes = len(ground_truths)
-            
+            total_true_bboxes = len(ground_truths) 
+
+             # Add the number of objects (ground truth boxes) to the total amount
+            amount_objects += total_true_bboxes
+
             # If none exists for this class then we can safely skip
             if total_true_bboxes == 0:
                 continue
@@ -546,11 +573,8 @@ def mAP_on_object_size(pred_boxes, true_boxes, iou_threshold=0.5, box_format="mi
             # torch.trapz for numerical integration
             average_precisions.append(torch.trapz(precisions, recalls))
         
-        mean_average_precisions[str(ratios[ratio_idx])] = sum(average_precisions) / len(average_precisions)
+        mean_average_precisions[str(ratios[ratio_idx])] = (sum(average_precisions) / len(average_precisions), amount_objects)
     return mean_average_precisions 
-
-
-    # SO ÄHNLICH ABER DIE RATIO MUSS ZUERST ABGEFRAGT WERDEN 
 
 
 

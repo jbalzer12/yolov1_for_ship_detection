@@ -1,10 +1,10 @@
 # dataset images folder
-#images: /scratch/tmp/jbalzer/data/DOTA-v2.0/images
-images: data/DOTA-v2.0/images
+images: /scratch/tmp/jbalzer/data/DOTA-v2.0/images
+#images: data/DOTA-v2.0/images
 
 # dataset labels folder
-#labels: /scratch/tmp/jbalzer/data/DOTA-v2.0/labels
-labels: data/DOTA-v2.0/labels
+labels: /scratch/tmp/jbalzer/data/DOTA-v2.0/labels
+#labels: data/DOTA-v2.0/labels
 
 # class names
 class_names: [ 'plane', 'ship', 'storage-tank', 'baseball-diamond', 'tennis-court', 'basketball-court', 

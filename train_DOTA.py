@@ -11,8 +11,8 @@ import torch.optim as optim
 import torchvision.transforms.functional as FT
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-#from model_modified import Yolov1 # changed
-from model import Yolov1
+from model_modified import Yolov1 # changed
+#from model import Yolov1
 from dataset import (
     Other_Dataset,
 )
@@ -34,6 +34,9 @@ from datetime import datetime as dt
 seed = 123
 torch.manual_seed(seed)
 
+OUTPUT_FILE_NAME = 'DOTA_135_S_14_lr_0001'
+RUN_LOCAL = False
+
 parser = argparse.ArgumentParser(description='YOLOv1-pytorch')
 parser.add_argument("--cfg", "-c", default="cfg/DOTA-v2.0/yolov1.yaml", help="Yolov1 config file path", type=str)
 parser.add_argument("--dataset_cfg", "-d", default="cfg/DOTA-v2.0/dataset.yaml", help="Dataset config file path", type=str)
@@ -41,8 +44,7 @@ parser.add_argument("--epochs", "-e", default=135, help="Training epochs", type=
 parser.add_argument("--batch_size", "-bs", default=64, help="Training batch size", type=int)
 parser.add_argument("--lr", "-lr", default=5e-4, help="Training learning rate", type=float)
 parser.add_argument("--load_model", "-lm", default='False', help="Load Model or train one [ 'True' | 'False' ]", type=str)  
-#parser.add_argument("--model_path", "-mp", default="/scratch/tmp/jbalzer/yolov1/overfit_DOTA_135_14.pth.tar", help="Model path", type=str)
-parser.add_argument("--model_path", "-mp", default="overfit_DOTA_135_14.pth.tar", help="Model path", type=str)
+parser.add_argument("--model_path", "-mp", default=f"/scratch/tmp/jbalzer/yolov1/overfit_{OUTPUT_FILE_NAME}.pth.tar", help="Model path", type=str)
 
 args = parser.parse_args()
 
@@ -52,7 +54,7 @@ DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 BATCH_SIZE = args.batch_size # 64 in original paper but I don't have that much vram, grad accum?
 WEIGHT_DECAY = 0.0005
 EPOCHS = args.epochs
-NUM_WORKERS = 4
+NUM_WORKERS = 15
 PIN_MEMORY = True
 if args.load_model == 'True':
     LOAD_MODEL = True # DEFAULT MODUS: training
@@ -62,9 +64,12 @@ LOAD_MODEL_FILE = args.model_path
 
 
 if not(LOAD_MODEL): 
-    OUTPUT = open('output_DOTA_135.txt', 'w') # HDF5 anstelle von .txt?
-    #OUTPUT = open('/scratch/tmp/jbalzer/yolov1/output_DOTA_135_14.txt', 'w') # HDF5 anstelle von .txt?
-    OUTPUT.write('Train_mAP Mean_loss\n')
+    if RUN_LOCAL:
+        OUTPUT = open('output_DOTA_135.txt', 'w') # HDF5 anstelle von .txt?
+    else:
+        OUTPUT = open(f'/scratch/tmp/jbalzer/yolov1/output_{OUTPUT_FILE_NAME}.txt', 'a') # HDF5 anstelle von .txt?
+    OUTPUT.write('Train_mAP Test_mAP Mean_loss\n')
+    OUTPUT.close()
 
 
 class Compose(object):
@@ -78,8 +83,8 @@ class Compose(object):
         return img, bboxes
 
 
-# transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor()])
-transform = Compose([transforms.Resize((1024, 1024)), transforms.ToTensor()])
+transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor()])
+#transform = Compose([transforms.Resize((1024, 1024)), transforms.ToTensor()])
 
 # Training function
 def train_fn(train_loader, model, optimizer, loss_fn):
@@ -99,7 +104,9 @@ def train_fn(train_loader, model, optimizer, loss_fn):
         # Update progress bar
         loop.set_postfix(loss=loss.item())
 
+    OUTPUT = open(f'/scratch/tmp/jbalzer/yolov1/output_{OUTPUT_FILE_NAME}.txt', 'a')
     OUTPUT.write(f' {sum(mean_loss)/len(mean_loss)}\n')
+    OUTPUT.close()
     print(f"Mean loss was {sum(mean_loss)/len(mean_loss)}")
 
 
@@ -118,34 +125,57 @@ def main():
     optimizer = optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
     )
-    loss_fn = YoloLoss(S=7, B=2, C=num_classes)
+    loss_fn = YoloLoss(S=S, B=B, C=num_classes)
 
     # In case a model gets loaded the checkpoint gets loaded
     if LOAD_MODEL:
         a = torch.load(LOAD_MODEL_FILE, map_location=DEVICE) #torch.device('cpu'))
         load_checkpoint(a, model, optimizer)
 
-    train_dataset = Other_Dataset(
-        #"/scratch/tmp/jbalzer/data/DOTA-v2.0/train.csv",
-        "data/DOTA-v2.0/train.csv",
-        transform=transform,
-        img_dir=IMG_DIR,
-        label_dir=LABEL_DIR,
-        S=S,
-        B=B,
-        C=num_classes,
-    )
+    if not RUN_LOCAL:
+        train_dataset = Other_Dataset(
+            "/scratch/tmp/jbalzer/data/DOTA-v2.0/train.csv",
+            #"data/DOTA-v2.0/train.csv",
+            transform=transform,
+            img_dir=IMG_DIR,
+            label_dir=LABEL_DIR,
+            S=S,
+            B=B,
+            C=num_classes,
+        )
 
-    test_dataset = Other_Dataset(
-        #"/scratch/tmp/jbalzer/data/DOTA-v2.0/val.csv",
-        "data/DOTA-v2.0/val_mixed.csv",
-        transform=transform, 
-        img_dir=IMG_DIR, 
-        label_dir=LABEL_DIR,
-        S=S,
-        B=B,
-        C=num_classes,
-    )
+        test_dataset = Other_Dataset(
+            "/scratch/tmp/jbalzer/data/DOTA-v2.0/val.csv",
+            #"data/DOTA-v2.0/val_mixed.csv",
+            transform=transform, 
+            img_dir=IMG_DIR, 
+            label_dir=LABEL_DIR,
+            S=S,
+            B=B,
+            C=num_classes,
+        )
+    else:
+        train_dataset = Other_Dataset(
+            #"/scratch/tmp/jbalzer/data/DOTA-v2.0/train.csv",
+            "data/DOTA-v2.0/train.csv",
+            transform=transform,
+            img_dir=IMG_DIR,
+            label_dir=LABEL_DIR,
+            S=S,
+            B=B,
+            C=num_classes,
+        )
+
+        test_dataset = Other_Dataset(
+            #"/scratch/tmp/jbalzer/data/DOTA-v2.0/val.csv",
+            "data/DOTA-v2.0/val_mixed.csv",
+            transform=transform, 
+            img_dir=IMG_DIR, 
+            label_dir=LABEL_DIR,
+            S=S,
+            B=B,
+            C=num_classes,
+        )
 
     train_loader = DataLoader(
         dataset=train_dataset,
@@ -155,9 +185,6 @@ def main():
         shuffle=True,
         drop_last=True,
     )
-
-    torch.save(train_loader, 'train_loader_DOTA.pth')
-    exit()
 
     test_loader = DataLoader(
         dataset=test_dataset,
@@ -174,12 +201,7 @@ def main():
         if not(LOAD_MODEL): 
             now = dt.now().strftime("%d/%m/%Y, %H:%M:%S")
             print("epoch:", epoch, f"/ {args.epochs} =>", epoch / args.epochs * 100, "%, date/time:", now)    
-            # file to check the progress
-            #NUM_EPOCH = open('/scratch/tmp/jbalzer/yolov1/numberofepochs_DOTA_14.txt', 'w') 
-            
-            NUM_EPOCH = open('numberofepochs_DOTA.txt', 'w') 
-            NUM_EPOCH.write("epoch:" + str(epoch) + f"/ {args.epochs} =>" + str(epoch / args.epochs * 100) + "%, date/time:" + str(now))
-            NUM_EPOCH.close()
+            OUTPUT = open(f'/scratch/tmp/jbalzer/yolov1/output_{OUTPUT_FILE_NAME}.txt', 'a')
 
         # In case a model gets loaded, images will be used by the model
         if LOAD_MODEL:
@@ -196,19 +218,42 @@ def main():
                 import sys
                 sys.exit()
 
+        ###### VALIDATION BASED ON TRAIN DATA ######
         pred_boxes, target_boxes = get_bboxes(
             loader=train_loader, model=model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
         )
 
-        mean_avg_prec = mean_average_precision(
+        train_mean_avg_prec = mean_average_precision(
             pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
         )
+        print(f"Train mAP: {train_mean_avg_prec}")
+        ###############################################
 
-        OUTPUT.write(f'{mean_avg_prec}')
-        print(f"Train mAP: {mean_avg_prec}")
+        ###### VALIDATION BASED ON TEST DATA ######
+        pred_boxes, target_boxes = get_bboxes(
+            loader=test_loader, model=model, iou_threshold=0.5, threshold=0.4, S=S, B=B, C=num_classes,
+        )
+
+        test_mean_avg_prec = mean_average_precision(
+            pred_boxes, target_boxes, iou_threshold=0.5, box_format="midpoint", num_classes=num_classes
+        )
+        print(f"Test mAP: {test_mean_avg_prec}")
+        ###############################################
+
+
+        OUTPUT.write(f'{train_mean_avg_prec} {test_mean_avg_prec}')
+        OUTPUT.close()
 
         # The training function gets called
         train_fn(train_loader, model, optimizer, loss_fn)
+
+        ###### SAVES CHECKPOINT INBETWEEN ######
+        checkpoint = {
+        "state_dict": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        }
+        save_checkpoint(checkpoint, filename=LOAD_MODEL_FILE)
+        ###############################################
 
     OUTPUT.close()
     
@@ -221,8 +266,6 @@ def main():
     save_checkpoint(checkpoint, filename=LOAD_MODEL_FILE)
     import sys
     sys.exit()
-    exit()
-
 
 if __name__ == "__main__":
     main()

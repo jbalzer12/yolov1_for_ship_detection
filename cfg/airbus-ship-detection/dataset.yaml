@@ -1,10 +1,11 @@
 # dataset images folder
-# images: /scratch/tmp/jbalzer/data/airbus-ship-detection/images
+#images: /scratch/tmp/jbalzer/data/airbus-ship-detection/images
 images: data/airbus-ship-detection/images
 
 # dataset labels folder
-# labels: /scratch/tmp/jbalzer/data/airbus-ship-detection/labels
+#labels: /scratch/tmp/jbalzer/data/airbus-ship-detection/labels
 labels: data/airbus-ship-detection/labels
 
 # class names
-class_names: [ 'ship', 'empty' ]
+#class_names: [ 'ship', 'empty' ]
+class_names: [ 'empty', 'ship' ]
