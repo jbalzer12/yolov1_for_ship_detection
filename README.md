@@ -7,3 +7,6 @@ The idea was to improve YOLOv1 by [Redmon et al. (2016)](https://pjreddie.com/da
 
 ### Content
 This repository used to train YOLOv1 for three different datasets: PASCAL VOC, Airbus Ship Detection and DOTA. Therefore it contains multiple train.py files, one for each dataset.
+
+Change paths in cfg files and download the requirements to run it. Ssome parameters in the train.py files also have to be modified.
+In this code the option is given to run the train.py file locally or not. I used to work with an HPC cluster to run these files.
