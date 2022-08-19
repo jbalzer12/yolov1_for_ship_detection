@@ -28,6 +28,7 @@ from utils import (
     parse_cfg,
 )
 from loss import YoloLoss
+import math
 
 from datetime import datetime as dt
 
@@ -85,6 +86,14 @@ class Compose(object):
 
 transform = Compose([transforms.Resize((448, 448)), transforms.ToTensor()])
 #transform = Compose([transforms.Resize((1024, 1024)), transforms.ToTensor()])
+
+# Learning rate scheduler
+def cos_lr_scheduler(epoch, total_epochs, lr, ramp_epochs=2):
+    cos_factor = 0.5 * (1 + math.cos(epoch / (total_epochs / 0.5) * 2*math.pi))
+    start_ramp_factor = min(1, ( epoch / ramp_epochs ))
+    total_factor = cos_factor * start_ramp_factor
+    # returns new lr
+    return lr * total_factor
 
 # Training function
 def train_fn(train_loader, model, optimizer, loss_fn):
@@ -246,6 +255,12 @@ def main():
 
         # The training function gets called
         train_fn(train_loader, model, optimizer, loss_fn)
+
+        ###### To USE A LEARNING RATE SCHEDULER ######
+        #optimizer.param_groups[0]['lr'] = lr_scheduler(epoch, current_lr)
+        optimizer.param_groups[0]['lr'] = cos_lr_scheduler(epoch, EPOCHS, LEARNING_RATE, ramp_epochs=2)
+        #current_lr = optimizer.param_groups[0]['lr'] 
+        ###############################################
 
         ###### SAVES CHECKPOINT INBETWEEN ######
         checkpoint = {

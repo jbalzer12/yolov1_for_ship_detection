@@ -267,9 +267,11 @@ def main():
         print(f"Test mAP: {test_mean_avg_prec}")
         ###############################################
         
+        ###### To USE A LEARNING RATE SCHEDULER ######
         #optimizer.param_groups[0]['lr'] = lr_scheduler(epoch, current_lr)
         optimizer.param_groups[0]['lr'] = cos_lr_scheduler(epoch, EPOCHS, LEARNING_RATE, ramp_epochs=2)
-        current_lr = optimizer.param_groups[0]['lr'] 
+        #current_lr = optimizer.param_groups[0]['lr'] 
+        ###############################################
 
         # The training function gets called
         train_fn(train_loader, model, optimizer, loss_fn)
