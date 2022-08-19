@@ -1,6 +1,10 @@
 """
 Implementation of Yolo (v1) architecture
 with slight modification with added BatchNorm.
+
+This file is nearly identical to the file model.py 
+but got slight modification to use it for train with 
+other hyperparameters like image size an raster size S
 """
 
 import torch
@@ -13,29 +17,7 @@ Tuple is structured by (kernel_size, filters, stride, padding)
 List is structured by tuples and lastly int with number of repeats
 """
 
-'''
-# Architecture for 448 S=20:
-architecture_config = [
-    (7, 64, 2, 3),
-    "M",
-    (3, 192, 1, 1),
-    "M",
-    (1, 128, 1, 0),
-    (3, 256, 1, 1),
-    (1, 256, 1, 0), # (1, 256, 1, 0),
-    (3, 512, 1, 1),
-    "M",
-    [(1, 256, 1, 1), (3, 512, 1, 1), 4], # [(1, 256, 1, 0), (3, 512, 1, 1), 4],
-    (1, 512, 1, 0), # original: (1, 512, 1, 0),
-    (3, 1024, 1, 1),
-    "M", # remove it to keep the matrix bigger to try S=28
-    [(1, 512, 1, 1), (3, 1024, 1, 1), 2], # original: [(1, 512, 1, 0), (3, 1024, 1, 1), 2],
-    (3, 1024, 1, 1), # originally: (3, 1024, 1, 1)
-    (3, 1024, 1, 0), # originally: (3, 1024, 2, 1)
-    (3, 1024, 1, 1), # originally: (3, 1024, 1, 1)
-    (3, 1024, 1, 1), # originally: (3, 1024, 1, 1)
-]
-'''
+# This config was used to train with image size 448 x 488 pixels and S=14
 architecture_config = [
     (7, 64, 2, 3),
     "M",

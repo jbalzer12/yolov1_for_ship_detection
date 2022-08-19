@@ -1,6 +1,6 @@
 ######################################################
 ## This file writes all train and validation files 
-## (.jpg and .txt) int oa csv.
+## (.jpg and .txt) into a csv.
 ## I used it, after I generated label files and separated
 ## the training data into two datasets: one for training
 ## and one for validation (90 : 10)
@@ -18,7 +18,7 @@ val_images_path = 'val/images'
 train_labels_path = 'train/labels'
 val_labels_path = 'val/labels'
 
-# This function removes a label.txt file, if a correspong .jpg file in the imgage folder does not exist:
+# This function removes a label.txt file, if a corresponding .jpg file in the image folder does not exist:
 def remove_label_files():
     # First we build an array that contains all the file names of our images:
     train_images = [f for f in listdir(train_images_path) if isfile(join(train_images_path, f))]
@@ -42,8 +42,7 @@ def remove_label_files():
     
 
     
-
-# This function generates a .csv file that pairs the correpsonding label.txt and image.jpg files.
+# This function generates a .csv file that pairs the corresponding label.txt and image.jpg files.
 # This file will be required by the yolo algorithm: 
 def generate_csv():
     train_file = open("train.csv", "a")
@@ -63,8 +62,6 @@ def generate_csv():
         val_file.write(image_id + '.jpg,' + image_id + '.txt\n')
 
     val_file.close()
-
-
 
 
 if __name__ == "__main__":

@@ -254,6 +254,50 @@ def plot_image(image, boxes, class_names):
         )
     plt.show()
 
+
+def save_image(image, boxes, class_names, idx):
+    """Plots predicted bounding boxes on the image"""
+    im = np.array(image)
+    height, width, _ = im.shape
+
+    # Create figure and axes
+    fig, ax = plt.subplots(1)
+    # Display the image
+    ax.imshow(im)
+
+    # box[0] is x midpoint, box[2] is width
+    # box[1] is y midpoint, box[3] is height
+
+    # Create a Rectangle patch.
+    # Each box contains a class label as well as (x,y) from the center 
+    # point and width and height of a bounding box.
+    for box in boxes:      
+        label = class_names[int(box[0])]
+        # From this point on, the class label is no longer part of the list 'box'
+        box = box[2:]
+        assert len(box) == 4, "Got more values than in x, y, w, h, in a box!"
+        upper_left_x = box[0] - box[2] / 2
+        upper_left_y = box[1] - box[3] / 2
+        rect = patches.Rectangle(
+            (upper_left_x * width, upper_left_y * height),
+            box[2] * width,
+            box[3] * height,
+            linewidth=1,
+            edgecolor="r",
+            facecolor="none",
+        )
+        # Add the patch to the Axes
+        ax.add_patch(rect)
+        # Add text label to bounding box patch 
+        plt.text(
+            upper_left_x * width, 
+            upper_left_y * height, 
+            label,
+            color='red',
+        )
+
+    plt.savefig(f'/scratch/tmp/jbalzer/yolov1/output_image_{str(idx)}.png')
+
 def yolo_label_to_bbox(label, img):
     '''
     label: list[class, center_x, center_y, width, height]

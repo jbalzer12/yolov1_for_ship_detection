@@ -1,5 +1,13 @@
+######################################################
+## This file got slightly changed to build a dataset 
+## with augmentation.
+######################################################
+## Author: Aladdin Persson
+## Modified by: Josefina Balzer
+######################################################
+
 """
-Creates a Pytorch dataset to load the Pascal VOC dataset ####
+Creates a Pytorch dataset to load the Pascal VOC dataset 
 """
 
 import torch

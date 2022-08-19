@@ -1,3 +1,9 @@
+######################################################
+## This file contains the augmentation function used 
+## for training with augmentation
+######################################################
+## Author: Josefina Balzer
+######################################################
 import albumentations as A
 import cv2
 import torch

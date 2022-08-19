@@ -23,6 +23,7 @@ from utils import (
     cellboxes_to_boxes,
     get_bboxes,
     plot_image,
+    save_image,
     save_checkpoint,
     load_checkpoint,
     parse_cfg,
@@ -36,7 +37,7 @@ import augmentation
 seed = 123
 torch.manual_seed(seed)
 
-OUTPUT_FILE_NAME = 'airbus_135_resolution_448_S_14_0001'
+OUTPUT_FILE_NAME = 'airbus_135_resolution_448_S_14_image_print'
 RUN_LOCAL = False
 CONTINUE_MODEL = False # THIS PARAMETER WAS ADDED TO CONTINUE THE TRAINING OF A SPECIFIC MODEL 
 
@@ -64,10 +65,16 @@ if args.load_model == 'True':
 elif args.load_model == 'False':
     LOAD_MODEL = False
 if not RUN_LOCAL:
-    LOAD_MODEL_FILE = args.model_path
+    if LOAD_MODEL:
+        LOAD_MODEL_FILE = args.model_path
+    else:
+        LOAD_MODEL_FILE = args.model_path
     NUM_WORKERS = 15
 else: 
-    LOAD_MODEL_FILE = 'overfit_tmp.pth.tar'
+    if LOAD_MODEL:
+        LOAD_MODEL_FILE = args.model_path
+    else:
+        LOAD_MODEL_FILE = 'overfit_tmp.pth.tar'
     NUM_WORKERS = 1
 if CONTINUE_MODEL:
     LOAD_MODEL_FILE = f"/scratch/tmp/jbalzer/yolov1/overfit_{OUTPUT_FILE_NAME}.pth.tar"
@@ -153,14 +160,16 @@ def main():
     # In case a model gets loaded the checkpoint gets loaded
     if LOAD_MODEL or CONTINUE_MODEL:
         a = torch.load(LOAD_MODEL_FILE, map_location=DEVICE) # torch.device('cpu'))
-        load_checkpoint(a, model, optimizer)
+        load_checkpoint(a, model, optimizer, LEARNING_RATE)
+        print('model loaded')
 
     if not RUN_LOCAL:
         csv_directory_train = "/scratch/tmp/jbalzer/data/airbus-ship-detection/train.csv"
-        csv_directory_test = "/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv"
+        #csv_directory_test = "/scratch/tmp/jbalzer/data/airbus-ship-detection/val.csv"
+        csv_directory_test = "/scratch/tmp/jbalzer/data/airbus-ship-detection/val-smaller.csv"
     else: 
         csv_directory_train = "data/airbus-ship-detection/train.csv"
-        csv_directory_test = "data/airbus-ship-detection/val-smaller.csv"
+        csv_directory_test = "data/airbus-ship-detection/val.csv"
 
     train_dataset = Other_Dataset(
         csv_directory_train,
@@ -193,6 +202,7 @@ def main():
         drop_last=True,
     )
 
+
     test_loader = DataLoader(
         dataset=test_dataset,
         batch_size=BATCH_SIZE,  
@@ -218,14 +228,21 @@ def main():
             # x contains the image while y contains the label matrix 
             for x, y in test_loader:
                 x = x.to(DEVICE)
-                start_idx = 8
-                for idx in range(8):
+                start_idx = 0
+                for idx in range(64):
                     bboxes = cellboxes_to_boxes(model(x), S=S, B=B, C=num_classes)
                     bboxes = non_max_suppression(bboxes[idx+start_idx], iou_threshold=0.5, threshold=0.4, box_format="midpoint")
-                    plot_image(x[idx+start_idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES)
+                    if RUN_LOCAL:
+                        plot_image(x[idx+start_idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES)
+                    else:
+                        save_image(x[idx+start_idx].permute(1,2,0).to("cpu"), bboxes, CLASS_NAMES, idx)
+                        print('image saved')
+                        
 
                 import sys
                 sys.exit()
+            
+
 
         ###### VALIDATION BASED ON TRAINING DATA ######
         pred_boxes, target_boxes = get_bboxes(
