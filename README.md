@@ -1,4 +1,4 @@
-# YOLOv1 for Ship Detection
+# Deep Learning for Object Detection on High Resolution Satellite Imagery
 
 Author: This repository contains code files by [Aladdin Persson](https://github.com/aladdinpersson/Machine-Learning-Collection) as well as files by Josefina Balzer (see [license](https://github.com/jbalzer12/yolov1_for_ship_detection/blob/main/LICENSE))
 
